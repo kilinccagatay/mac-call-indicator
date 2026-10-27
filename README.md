@@ -19,6 +19,12 @@ The badge remained visible beyond the initial 40-second window. After reports
 stopped, the browser hid the badge and the Home Assistant entity was confirmed
 off at 48 seconds after the last report. Navigating to another dashboard tab
 also removed the badge from view. Five unit tests cover the detection rules.
+The badge was also verified on a Denver TAC-70051 running the Crosswalk-based
+WallPanel Legacy browser. Its old HTTP cache initially retained the previous
+dashboard; restarting the app alone did not refresh it. Refresh the page with
+cache clearing if a newly added badge appears in a desktop browser but not on
+the panel. The physical panel showed the test badge and hid it when normal
+false reports resumed, without installing an APK or changing firmware.
 
 The helper uses public Accessibility APIs, not private CallKit APIs or Teams logs.
 It scans only Teams windows, skips editable fields, never reads window titles,
