@@ -4,6 +4,18 @@ Experimental, local-only call status for Home Assistant and old HoaryDash panels
 It sends exactly one boolean, `in_call`, without meeting titles, numbers,
 participants, calendar access, Microsoft Graph, Entra registration, or Teams tokens.
 
+Built for the [older Android Home Assistant panel project, tested on a Denver
+TAC-70051](https://github.com/kilinccagatay/denver-tac-70051-home-assistant-base-station).
+That repository contains the full five-page HoaryDash layout, entity mapping,
+tablet setup, and enclosure build. This helper runs on the Mac; the tablet only
+displays the resulting Home Assistant entity.
+
+![Call badge on the actual 800 × 480 tablet](docs/images/hoarydash-call-badge.png)
+
+The Home badge has a larger red dot above a centered **Toplantı** label, with
+enough clearance from the navigation bar. Change the label in the HTML snippet
+if you prefer another language. The Mac menu remains in English.
+
 ## Current status
 
 The Teams desktop test call exposed Leave, microphone controls, and a timer via
@@ -35,7 +47,8 @@ heuristic and can break when Teams changes its labels or window structure.
 
 ## Build and local validation
 
-Use a Mac with Xcode command-line tools and Swift 5.9 or later:
+Requires macOS 13 or later, Xcode command-line tools, and Swift 5.9 or later.
+Clone [this repository](https://github.com/kilinccagatay/mac-call-indicator), then:
 
 ```sh
 swift test
@@ -66,6 +79,10 @@ Login Items; the menu shows a mixed checkmark while approval is pending.
 
 The installed executable also supports `--login-status`, `--enable-login`, and
 `--disable-login` for installation/removal. These do not need Accessibility.
+To remove the helper, run `sh scripts/uninstall.sh`. It disables login startup
+and stops the app, then prints the exact files to remove manually. Revoke its
+Accessibility permission and remove its Home Assistant template when no longer
+needed. The uninstall script does not delete your configuration or credentials.
 
 ## Required permissions
 
@@ -96,6 +113,13 @@ is POST-only and local-only. Store its full URL in a mode-0600 file at:
 ```text
 ~/Library/Application Support/MacCallIndicator/webhook-url
 ```
+
+The private URL has the form `http://HOME_ASSISTANT_HOST:8123/api/webhook/YOUR_RANDOM_ID`
+(or the HTTPS equivalent). Define `mac_call_indicator_webhook` in Home Assistant's
+`secrets.yaml` with the same random ID. Reload template entities after validating
+the configuration. Keep both the secrets file and local URL file out of Git.
+Use a trusted editor to create the URL file; avoid placing the real URL in
+shell history, screenshots, or issue reports.
 
 Use HTTPS when available. Plain HTTP provides no transport encryption; restrict
 such a setup to a trusted private LAN. Never expose the webhook to the internet.
@@ -133,6 +157,7 @@ belongs outside this repository. Do not add real endpoints, secrets, preference
 dumps, screenshots of work calls, or company logs. Home Assistant will receive
 only `{"in_call":true}` or `{"in_call":false}`.
 
-Before a public release, document exactly which app versions and call scenarios
-were tested and supply login-service installation and removal instructions.
-No public repository or release is created by the build script.
+This is an experimental source release, not a notarized binary distribution.
+No public repository or release is created by the build script. UI detection
+depends on Teams controls and needs validation after Teams updates; the test
+coverage and limits are listed above.
