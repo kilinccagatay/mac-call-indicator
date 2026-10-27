@@ -53,6 +53,20 @@ app quit, lock, permission loss, and network loss before enabling a login servic
 Unknown/unreadable states report false. This avoids a stuck-on indicator but may
 hide it when a window is inaccessible. Do not claim universal call detection.
 
+## Start at login
+
+Install with `sh scripts/install.sh`, then use the menu bar's
+**Start at Login** checkbox. This uses macOS
+`SMAppService.mainApp`. Unchecking it leaves the current app running but prevents
+startup at the next login. Quit exits the current app without a watchdog
+relaunch; it does not change the login preference. New installations default to
+off. The installer migrates an older project LaunchAgent to the standard login
+item and preserves its enabled startup behavior. macOS may require approval in
+Login Items; the menu shows a mixed checkmark while approval is pending.
+
+The installed executable also supports `--login-status`, `--enable-login`, and
+`--disable-login` for installation/removal. These do not need Accessibility.
+
 ## Required permissions
 
 The app does not request microphone, camera, screen recording, input monitoring,
@@ -68,6 +82,10 @@ login service still reports permission required, remove its old entry and add th
 current installed app again through System Settings. Do not reset the whole
 permission database. The background process's `observer_authorized` status is the
 relevant check; a command run from an already authorized terminal may differ.
+The running menu-bar app writes only `in_call` and `observer_authorized` to the
+private `~/Library/Application Support/MacCallIndicator/status.json` file every
+ten seconds and on call changes. Check its modification time to ensure the app
+is running; this file never contains call details or webhook credentials.
 
 ## Home Assistant
 

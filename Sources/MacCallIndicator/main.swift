@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import Foundation
+import ServiceManagement
 
 // Read-only AX queries. Never request AX actions or read a window's title.
 func attribute(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
@@ -85,6 +86,27 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
 }
 
 let arguments = Set(CommandLine.arguments.dropFirst())
+// Used by installation/removal scripts; no Accessibility access is needed.
+if arguments.contains("--login-status") {
+    let status = SMAppService.mainApp.status
+    print(status == .enabled ? "enabled" : status == .requiresApproval ? "requires-approval" : "disabled")
+    exit(0)
+}
+if arguments.contains("--enable-login") || arguments.contains("--disable-login") {
+    do {
+        let service = SMAppService.mainApp
+        if arguments.contains("--enable-login") {
+            if service.status != .enabled { try service.register() }
+        } else if service.status == .enabled || service.status == .requiresApproval {
+            try service.unregister()
+        }
+        print(service.status == .enabled ? "enabled" : service.status == .requiresApproval ? "requires-approval" : "disabled")
+    } catch {
+        fputs("Login setting could not be updated: \(error.localizedDescription)\n", stderr)
+        exit(1)
+    }
+    exit(0)
+}
 if arguments.contains("--request-access") {
     let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
     print("accessibility_authorized=\(AXIsProcessTrustedWithOptions(options))")
@@ -104,6 +126,9 @@ let menu = NSMenu()
 let statusLine = NSMenuItem(title: "Checking Accessibility permission…", action: nil, keyEquivalent: "")
 menu.addItem(statusLine)
 menu.addItem(.separator())
+let loginLaunch = LoginLaunch()
+loginLaunch.add(to: menu)
+menu.addItem(.separator())
 menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 statusItem.menu = menu
 var lastValue: Bool? = nil
@@ -120,6 +145,20 @@ pollTimer.setEventHandler {
     }
     let now = Date()
     if value != lastValue || now.timeIntervalSince(lastSend) >= 10 {
+        // Local diagnostics from the actual menu-bar process, rather than a
+        // terminal child that may inherit a different Accessibility approval.
+        let support = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/MacCallIndicator")
+        do {
+            try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true,
+                                                    attributes: [.posixPermissions: 0o700])
+            let statusURL = support.appendingPathComponent("status.json")
+            let data = try JSONSerialization.data(withJSONObject: [
+                "in_call": value, "observer_authorized": authorized
+            ])
+            try data.write(to: statusURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: statusURL.path)
+        } catch { /* Diagnostics must not interrupt detection or leak paths. */ }
         if let endpoint = webhookURL() { send(value, to: endpoint) }
         // Boolean-only local logging. No labels, URLs, tokens, or call metadata.
         if value != lastValue {

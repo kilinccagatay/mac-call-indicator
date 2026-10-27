@@ -1,7 +1,10 @@
 #!/bin/sh
 set -eu
+APP="$HOME/Applications/MacCallIndicator.app/Contents/MacOS/MacCallIndicator"
+if [ -x "$APP" ]; then "$APP" --disable-login; fi
 launchctl bootout "gui/$(id -u)/local.MacCallIndicator" 2>/dev/null || true
-echo 'Login service stopped. Home Assistant will expire the indicator within 40 seconds.'
+pkill -x MacCallIndicator 2>/dev/null || true
+echo 'Login startup disabled. Home Assistant will expire the indicator within 40 seconds.'
 echo 'Remove only these exact items manually when ready:'
 echo "$HOME/Library/LaunchAgents/local.MacCallIndicator.plist"
 echo "$HOME/Applications/MacCallIndicator.app"
