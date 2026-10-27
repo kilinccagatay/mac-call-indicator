@@ -1,0 +1,45 @@
+<!-- Append to HoaryDash theme.custom (which is emitted inside a style tag).
+Also add binary_sensor.mac_call_active to Ana sensors.cards so it is subscribed.
+No credentials belong in this file. ES5 syntax supports older WebViews. -->
+</style>
+<style>
+#screen-Ana [id^="binary_sensor-mac_call_active-"] { display:none !important; }
+#mac-call-badge {
+  position:absolute; right:14px; bottom:14px; z-index:25;
+  display:none; padding:5px 9px; border-radius:12px;
+  background:#40262b; color:#ffb4b4; font:600 14px Arial,sans-serif;
+  pointer-events:none; white-space:nowrap;
+}
+#mac-call-badge .call-dot {
+  display:inline-block; width:8px; height:8px; margin-right:6px;
+  border-radius:50%; background:#ff4545;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var home = document.getElementById('screen-Ana');
+  var listeners = window.entityListeners && window.entityListeners['binary_sensor.mac_call_active'];
+  if (!home || !listeners || document.getElementById('mac-call-badge')) { return; }
+  var badge = document.createElement('div');
+  badge.id = 'mac-call-badge';
+  badge.setAttribute('role', 'status');
+  badge.innerHTML = '<span class="call-dot"></span>Toplantı';
+  home.appendChild(badge);
+  var active = false;
+  var reportedAt = 0;
+  function render() {
+    var age = new Date().getTime() / 1000 - reportedAt;
+    badge.style.display = active && window.haSocketReady && age >= -5 && age < 40 ? 'block' : 'none';
+  }
+  listeners.push(function (state, attrs) {
+    if (typeof state !== 'undefined') { active = state === 'on'; }
+    if (attrs && typeof attrs.last_report_epoch !== 'undefined') {
+      reportedAt = Number(attrs.last_report_epoch) || 0;
+    }
+    render();
+  });
+  window.addEventListener('offline', function () { active = false; render(); }, false);
+  window.setInterval(render, 1000);
+}, false);
+</script>
+<style>

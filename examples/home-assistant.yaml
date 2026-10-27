@@ -1,0 +1,23 @@
+# Merge this item into your existing template: list. Do not replace other items.
+# Generate a private random ID and define mac_call_indicator_webhook in secrets.yaml.
+template:
+  - triggers:
+      - trigger: webhook
+        webhook_id: !secret mac_call_indicator_webhook
+        allowed_methods: [POST]
+        local_only: true
+        id: report
+      - trigger: homeassistant
+        event: start
+        id: startup
+    binary_sensor:
+      - name: Mac Call Active
+        unique_id: mac_call_indicator_active
+        state: >-
+          {{ trigger.id == 'report' and
+             trigger.json is defined and
+             trigger.json.in_call is defined and
+             trigger.json.in_call is sameas true }}
+        auto_off: "00:00:40"
+        attributes:
+          last_report_epoch: "{{ as_timestamp(now()) if trigger.id == 'report' else 0 }}"
