@@ -5,15 +5,16 @@ No credentials belong in this file. ES5 syntax supports older WebViews. -->
 <style>
 #screen-Ana [id^="binary_sensor-mac_call_active-"] { display:none !important; }
 #mac-call-badge {
-  position:absolute; right:14px; bottom:14px; z-index:25;
-  display:none; padding:5px 9px; border-radius:12px;
-  background:#40262b; color:#ffb4b4; font:600 14px Arial,sans-serif;
-  pointer-events:none; white-space:nowrap;
+  position:absolute; right:12px; bottom:14px; z-index:25;
+  display:none; width:62px; padding:7px 0; border-radius:10px;
+  background:#40262b; color:#ffb4b4; font:600 12px Arial,sans-serif;
+  pointer-events:none; white-space:nowrap; text-align:center;
 }
 #mac-call-badge .call-dot {
-  display:inline-block; width:8px; height:8px; margin-right:6px;
+  display:block; width:14px; height:14px; margin:0 auto 5px;
   border-radius:50%; background:#ff4545;
 }
+#mac-call-badge .call-label { display:block; line-height:16px; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var badge = document.createElement('div');
   badge.id = 'mac-call-badge';
   badge.setAttribute('role', 'status');
-  badge.innerHTML = '<span class="call-dot"></span>Toplantı';
+  badge.innerHTML = '<span class="call-dot"></span><span class="call-label">Toplantı</span>';
   home.appendChild(badge);
   var active = false;
   var reportedAt = 0;
