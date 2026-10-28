@@ -10,14 +10,27 @@ template:
       - trigger: homeassistant
         event: start
         id: startup
+      - trigger: time_pattern
+        seconds: "/5"
+        id: watchdog
     binary_sensor:
       - name: Mac Call Active
         unique_id: mac_call_indicator_active
         state: >-
-          {{ trigger.id == 'report' and
-             trigger.json is defined and
-             trigger.json.in_call is defined and
-             trigger.json.in_call is sameas true }}
-        auto_off: "00:00:40"
+          {% set valid = trigger.id == 'report' and trigger.json is defined and
+             trigger.json is mapping and trigger.json.in_call is defined and
+             (trigger.json.in_call is sameas true or trigger.json.in_call is sameas false) %}
+          {{ trigger.json.in_call if valid else this.state == 'on' }}
+        availability: >-
+          {% set valid = trigger.id == 'report' and trigger.json is defined and
+             trigger.json is mapping and trigger.json.in_call is defined and
+             (trigger.json.in_call is sameas true or trigger.json.in_call is sameas false) %}
+          {% set age = as_timestamp(now()) - (this.attributes.last_report_epoch | default(0) | float(0)) %}
+          {{ trigger.id != 'startup' and (valid or (age >= -5 and age < 40)) }}
         attributes:
-          last_report_epoch: "{{ as_timestamp(now()) if trigger.id == 'report' else 0 }}"
+          last_report_epoch: >-
+            {% set valid = trigger.id == 'report' and trigger.json is defined and
+               trigger.json is mapping and trigger.json.in_call is defined and
+               (trigger.json.in_call is sameas true or trigger.json.in_call is sameas false) %}
+            {{ as_timestamp(now()) if valid else
+               (0 if trigger.id == 'startup' else this.attributes.last_report_epoch | default(0)) }}

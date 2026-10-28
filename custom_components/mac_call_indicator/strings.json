@@ -1,0 +1,47 @@
+{
+  "title": "Mac Call Indicator",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Meeting indicator",
+        "description": "Add this integration, then open Mac Call Indicator Settings on your Mac and pair using Sign in with Home Assistant or an imported access token. Dashboard/status only sends no actuator commands. Targets must be light, switch, or input_boolean entities, never a person or read-only sensor.",
+        "data": {
+          "name": "Device name", "output_mode": "Output type", "target_entity": "Target entity ID (blank for dashboard only)",
+          "idle_off": "Color light: turn off when idle instead of using idle color",
+          "offline_action": "When reports stop: off or hold previous output",
+          "brightness_pct": "Color light brightness (%)", "busy_color": "Meeting color", "idle_color": "Idle color"
+        }
+      }
+    },
+    "error": {
+      "invalid_mode": "Select a supported output type.",
+      "wrong_entity_type": "Target domain must match the selected output type.",
+      "entity_not_found": "The target entity does not exist.",
+      "color_not_supported": "This light does not support color. Choose on/off mode.",
+      "invalid_offline_action": "Choose off or hold.",
+      "invalid_brightness": "Choose brightness between 1 and 100.",
+      "invalid_color": "Choose a valid RGB color.",
+      "invalid_idle_action": "Choose an idle action."
+    },
+    "abort": {"already_configured": "This Mac is already configured."}
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Meeting output",
+        "description": "Status only never controls an actuator. Idle color is used only while fresh reports explicitly say no meeting. Lost reports make the meeting entity unavailable.",
+        "data": {
+          "output_mode": "Output type", "target_entity": "Target entity ID (blank for dashboard only)",
+          "idle_off": "Color light: turn off when idle", "offline_action": "When reports stop: off or hold",
+          "brightness_pct": "Color light brightness (%)", "busy_color": "Meeting color", "idle_color": "Idle color"
+        }
+      }
+    },
+    "error": {
+      "invalid_mode": "Select a supported output type.", "wrong_entity_type": "Target domain does not match.",
+      "entity_not_found": "Entity not found.", "color_not_supported": "This light does not support color.",
+      "invalid_offline_action": "Choose off or hold.", "invalid_brightness": "Choose 1–100.",
+      "invalid_color": "Choose a valid RGB color.", "invalid_idle_action": "Choose an idle action."
+    }
+  }
+}

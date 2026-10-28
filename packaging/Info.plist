@@ -5,7 +5,11 @@
   <key>CFBundleExecutable</key><string>MacCallIndicator</string>
   <key>CFBundleName</key><string>Mac Call Indicator</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>3</string>
-  <key>CFBundleShortVersionString</key><string>0.2.1</string>
+  <key>CFBundleVersion</key><string>4</string>
+  <key>CFBundleShortVersionString</key><string>0.3.0</string>
+  <key>CFBundleURLTypes</key><array><dict>
+    <key>CFBundleURLName</key><string>Home Assistant authentication</string>
+    <key>CFBundleURLSchemes</key><array><string>mac-call-indicator</string></array>
+  </dict></array>
   <key>LSUIElement</key><true/>
 </dict></plist>

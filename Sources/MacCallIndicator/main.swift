@@ -133,6 +133,12 @@ let manualMeeting = ManualMeetingState()
 let manualMenu = ManualMeetingMenu(state: manualMeeting)
 manualMenu.add(to: menu)
 menu.addItem(.separator())
+let connectionMenu = MainActor.assumeIsolated {
+    let controller = ConnectionSettingsMenu()
+    controller.add(to: menu)
+    return controller
+}
+menu.addItem(.separator())
 let loginLaunch = LoginLaunch()
 loginLaunch.add(to: menu)
 menu.addItem(.separator())
@@ -140,6 +146,7 @@ menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate
 statusItem.menu = menu
 var lastValue: Bool? = nil
 var lastSend = Date.distantPast
+let meetingTest = TransientMeetingTest()
 let pollQueue = DispatchQueue(label: "local.MacCallIndicator.poll")
 let pollTimer = DispatchSource.makeTimerSource(queue: pollQueue)
 pollTimer.schedule(deadline: .now(), repeating: 2)
@@ -148,7 +155,7 @@ func updateCallState() {
     let authorized = AXIsProcessTrusted()
     let now = Date()
     let until = manualMeeting.deadline(now: now)
-    let value = ManualMeetingState.isMeeting(callDetected: detected, manualUntil: until, now: now)
+    let value = ManualMeetingState.isMeeting(callDetected: detected, manualUntil: until, now: now) || meetingTest.active(now: now)
     DispatchQueue.main.async {
         let minutes = until.map { ManualMeetingState.remainingMinutes(until: $0, now: Date()) }
         let title = minutes.map { "● \($0)m" } ?? (value ? "●" : "○")
@@ -177,7 +184,10 @@ func updateCallState() {
             try data.write(to: statusURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: statusURL.path)
         } catch { /* Diagnostics must not interrupt detection or leak paths. */ }
-        if let endpoint = webhookURL() { send(value, to: endpoint) }
+        // Without AX permission, silence is unknown rather than a verified idle
+        // report. An explicit manual/test meeting is still valid evidence.
+        if authorized || until != nil || meetingTest.active(now: now),
+           let endpoint = ConnectionStore.shared.endpoint() { send(value, to: endpoint) }
         // Boolean-only local logging. No labels, URLs, tokens, or call metadata.
         if value != lastValue {
             print("in_call=\(value) observer_authorized=\(AXIsProcessTrusted())")
@@ -188,6 +198,16 @@ func updateCallState() {
     }
 }
 manualMenu.onChange = { pollQueue.async { updateCallState() } }
+MainActor.assumeIsolated {
+    connectionMenu.onChange = { pollQueue.async { lastSend = .distantPast; updateCallState() } }
+    connectionMenu.onTest = {
+        meetingTest.start()
+        pollQueue.async { lastSend = .distantPast; updateCallState() }
+    }
+}
 pollTimer.setEventHandler { updateCallState() }
 pollTimer.resume()
+if arguments.contains("--settings") {
+    DispatchQueue.main.async { connectionMenu.openSettings() }
+}
 application.run()

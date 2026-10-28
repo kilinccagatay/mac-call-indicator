@@ -1,0 +1,4 @@
+# Isolated compatibility baseline, never installed into the system Python.
+homeassistant==2025.3.4
+pytest>=8,<10
+pytest-asyncio>=0.24,<2

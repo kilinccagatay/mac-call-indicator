@@ -1,0 +1,106 @@
+blueprint:
+  name: Mac Call Indicator — color meeting lamp
+  description: >-
+    Meeting color during calls, idle color (or off) only with fresh idle reports.
+    The target must support color. Use this OR the integration's built-in light
+    control, never both for the same lamp.
+  domain: automation
+  input:
+    meeting_entity:
+      name: Meeting source
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+    target_entity:
+      name: Color light
+      selector:
+        entity:
+          filter:
+            - domain: light
+    busy_color:
+      name: Meeting color
+      default: [255, 0, 0]
+      selector:
+        color_rgb:
+    idle_color:
+      name: Idle color
+      default: [0, 255, 0]
+      selector:
+        color_rgb:
+    idle_off:
+      name: Turn off when idle instead of using idle color
+      default: false
+      selector:
+        boolean:
+    brightness_pct:
+      name: Brightness
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+    offline_action:
+      name: When reports stop
+      default: "off"
+      selector:
+        select:
+          options:
+            - label: Turn light off
+              value: "off"
+            - label: Leave light unchanged
+              value: hold
+mode: restart
+variables:
+  source: !input meeting_entity
+  target_id: !input target_entity
+  busy: !input busy_color
+  idle: !input idle_color
+  idle_off: !input idle_off
+  offline: !input offline_action
+  fresh: >-
+    {% set age = as_timestamp(now()) - (state_attr(source, 'last_report_epoch') | float(0)) %}
+    {{ states(source) in ['on', 'off'] and age >= -5 and age < 40 }}
+triggers:
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: "on"
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: "off"
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: unavailable
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: unknown
+  - trigger: homeassistant
+    event: start
+  - trigger: time_pattern
+    seconds: "/5"
+    id: watchdog
+conditions:
+  - condition: template
+    value_template: "{{ target_id.startswith('light.') }}"
+  - condition: template
+    value_template: >-
+      {{ state_attr(target_id, 'supported_color_modes') | default([], true) |
+         select('in', ['hs', 'xy', 'rgb', 'rgbw', 'rgbww']) | list | count > 0 }}
+  - condition: template
+    value_template: "{{ trigger.id != 'watchdog' or (not fresh and offline == 'off' and is_state(target_id, 'on')) }}"
+actions:
+  - choose:
+      - conditions: "{{ fresh and (is_state(source, 'on') or not idle_off) }}"
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: "{{ target_id }}"
+            data:
+              rgb_color: "{{ busy if is_state(source, 'on') else idle }}"
+              brightness_pct: !input brightness_pct
+      - conditions: "{{ fresh or offline == 'off' }}"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: "{{ target_id }}"

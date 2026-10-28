@@ -1,97 +1,122 @@
-# Mac Call Indicator
+# Mac Call Indicator for Home Assistant
 
-Experimental, local-only call and manual-meeting status for Home Assistant and old HoaryDash panels.
-It sends exactly one boolean, `in_call`, without meeting titles, numbers,
-participants, calendar access, Microsoft Graph, Entra registration, or Teams tokens.
+Turn your Mac's meeting status into a Home Assistant entity. Use it for a door-side
+meeting lamp, an RGB desk light, a switch, an input boolean, or a dashboard badge.
+No tablet is required.
 
-Built for the [older Android Home Assistant panel project, tested on a Denver
-TAC-70051](https://github.com/kilinccagatay/denver-tac-70051-home-assistant-base-station).
-That repository contains the full five-page HoaryDash layout, entity mapping,
-tablet setup, and enclosure build. This helper runs on the Mac; the tablet only
-displays the resulting Home Assistant entity.
+The Mac sends only `{"in_call":true}` or `{"in_call":false}`. Meeting titles,
+participants, phone numbers, messages, and calendar contents never leave the Mac.
+Automatic detection currently targets Teams desktop; manual meeting timers work
+independently of calls.
 
-![Call badge on the actual 800 × 480 tablet](docs/images/hoarydash-call-badge.png)
+## Choose your output
 
-The Home badge has a larger red dot above a centered **Toplantı** label, with
-enough clearance from the navigation bar. Change the label in the HTML snippet
-if you prefer another language. The Mac menu remains in English.
+| Output type | During a meeting | Fresh idle report | Reports stop |
+| --- | --- | --- | --- |
+| **Dashboard / status only** | Source entity on; show your badge | Source entity off; hide it | Source entity unavailable; hide it |
+| **Light — on/off** | Turn light on | Turn light off | Turn off, or explicitly leave unchanged |
+| **Light — color** | Meeting color, red by default | Idle color, green by default, or off | Turn off or leave unchanged; never infer green |
+| **Switch** | Turn selected switch on | Turn selected switch off | Turn off or leave unchanged |
+| **Input boolean** | Turn helper on | Turn helper off | Turn off or leave unchanged |
 
-## Features
+The meeting **source** is a read-only binary sensor. The optional **target** is
+an actuator/helper you choose. Dashboard mode needs no target and sends no light,
+switch, or helper commands. A person entity or arbitrary read-only sensor is not
+an actuator. Color mode accepts only color-capable lights.
 
-- Automatic Teams call detection through local macOS Accessibility controls.
-- Manual meeting status until a chosen time, or instantly for 30 minutes / 1 hour.
-- Android-style circular time picker with mouse, keyboard, and accessibility support.
-- Remaining minutes in the menu bar, with an option to end a manual meeting early.
-- Optional **Start at Login**, controlled from the menu bar.
-- Home Assistant and HoaryDash integration using only a boolean, with stale-state expiry.
+The integration owns the target behavior; the Mac continues to report only a
+boolean. Alternatively use status-only mode and a Home Assistant blueprint for
+one or multiple outputs. Do not give both the integration and a blueprint control
+of the same target.
 
-## Current status
+## Quick start
 
-The Teams desktop test call exposed Leave, microphone controls, and a timer via
-macOS Accessibility. Those controls disappeared after the test ended. The
-installed background helper detected the test call, and the HoaryDash badge
-appeared, stayed visible while muted, and disappeared after call end. This
-version targets Teams only; Phone/FaceTime support is out of scope. Tested with
-Teams desktop 26183.1901.4874.5228; ordinary work meetings and other UI languages
-still need separate validation.
+1. Build/install the Mac app: `sh scripts/install.sh` (macOS 13+, Xcode command-line
+   tools, Swift 5.9+). Grant Accessibility through normal macOS settings if you want
+   automatic Teams detection. Manual timers do not require that permission.
+2. Install and add the [Home Assistant integration](docs/home-assistant.md#install-the-integration).
+3. Open the Mac menu → **Settings… → Connection**. Enter your Home Assistant URL,
+   or click **Use default** to fill `http://homeassistant.local:8123/`. This only
+   fills the form; it does not save, sign in, or replace a saved connection.
+   Local name discovery must work; an IP address or HTTPS URL can be entered instead.
+4. Select **Home Assistant integration — automatic entity**. Sign in with Home
+   Assistant, or import an access token on older installations. Pairing requires
+   a Home Assistant administrator.
+5. In **Output**, choose a mode. Leave **Dashboard / status only** selected for a
+   dashboard badge. For an actuator, choose a matching entity using **Load entities**
+   or type its entity ID. Color controls appear only in color mode.
+6. Click **Save & pair**. The app displays the created meeting entity ID. Use
+   **Test meeting for 10 seconds** to verify it, then test a real connected call.
+   The receiver test requires Accessibility so it can return to a known detected
+   state; existing manual timers and calls are never cancelled by testing.
 
-Receiver validation used six synthetic boolean heartbeats ten seconds apart.
-The badge remained visible beyond the initial 40-second window. After reports
-stopped, the browser hid the badge and the Home Assistant entity was confirmed
-off at 48 seconds after the last report. Navigating to another dashboard tab
-also removed the badge from view. Eleven unit tests cover detection and independent manual deadlines.
-The badge was also verified on a Denver TAC-70051 running the Crosswalk-based
-WallPanel Legacy browser. Its old HTTP cache initially retained the previous
-dashboard; restarting the app alone did not refresh it. Refresh the page with
-cache clearing if a newly added badge appears in a desktop browser but not on
-the panel. The physical panel showed the test badge and hid it when normal
-false reports resumed, without installing an APK or changing firmware.
+Already using the original webhook setup? It keeps working without migration.
+Select **Webhook — existing receiver / blueprint** to save its address in Keychain.
+Use the [updated YAML receiver](examples/home-assistant.yaml) and the
+[legacy setup guide](docs/home-assistant.md#existing-webhook-or-yaml-setup) for explicit
+availability. Output configuration in webhook mode stays in Home Assistant.
 
-The helper uses public Accessibility APIs, not private CallKit APIs or Teams logs.
-It scans only Teams windows, skips editable fields, never reads window titles,
-and retains only control evidence. A positive state requires an end control,
-a microphone control, and an elapsed timer greater than zero in the same window.
-Busy status and microphone activity alone cannot trigger it. This is a UI-based
-heuristic and can break when Teams changes its labels or window structure.
+## Settings and authentication
 
-## Build and local validation
+- **Connection:** Home Assistant address, Use default, generic device name,
+  connection method, sign-in, private JSON import, and connection test.
+- **Output:** dashboard-only, light on/off, color light, switch, or input boolean.
+  Target domain and color capability are checked before pairing. Configure colors,
+  brightness, idle-off, and disconnected behavior when applicable.
+- **Credentials:** webhook URL, access token, and OAuth refresh token are stored
+  in macOS Keychain. Ordinary preferences contain no credentials. Imports populate
+  the form and require review/save; sign-in/token validation may store credentials.
+- **Sign in with Home Assistant:** browser-based authorization with random state
+  and PKCE S256. Your password stays in Home Assistant. Native sign-in requires
+  a server advertising PKCE; older servers can use an imported long-lived token.
+- **Disconnect:** stops reporting, clears local credentials for the selected server,
+  and attempts OAuth refresh-token revocation. If the server is unreachable, revoke
+  its session from your Home Assistant profile too. Imported long-lived tokens must
+  be revoked manually in the profile when no longer needed.
 
-Requires macOS 13 or later, Xcode command-line tools, and Swift 5.9 or later.
-Clone [this repository](https://github.com/kilinccagatay/mac-call-indicator), then:
+See the [complete Home Assistant guide](docs/home-assistant.md) for import formats,
+authentication permissions, pairing, network requirements, and troubleshooting.
 
-```sh
-swift test
-sh scripts/build-app.sh
-dist/MacCallIndicator.app/Contents/MacOS/MacCallIndicator --once
-```
+| Connection and default address | Dashboard / status only | Optional color light |
+| :---: | :---: | :---: |
+| <img src="docs/images/settings-connection.png" alt="Connection settings with Use default, Home Assistant sign-in and private credential import" width="270"> | <img src="docs/images/settings-status-only.png" alt="Dashboard-only output with no target or color controls" width="270"> | <img src="docs/images/settings-color-light.png" alt="Optional color-light settings with target, colors, brightness and offline policy" width="270"> |
 
-Grant Accessibility access only through normal macOS Privacy & Security settings,
-if your organization's policy allows it. The optional `--request-access` command
-opens the standard permission flow. No TCC database changes, bypasses, admin
-policy changes, or disabling SIP are part of this project.
+These are isolated UI previews using example values, without signing in or
+controlling a real device.
 
-Test a connected call, muted call, background window, ringing, pre-join, call end,
-app quit, lock, permission loss, and network loss before enabling a login service.
-Unknown/unreadable states report false. This avoids a stuck-on indicator but may
-hide it when a window is inaccessible. Do not claim universal call detection.
+## Meeting lamp blueprints
 
-## Start at login
+Use these with a status-only source from this integration or the updated YAML
+receiver. Both check the report timestamp; stale `off` is not verified availability.
 
-Install with `sh scripts/install.sh`, then use the menu bar's
-**Start at Login** checkbox. This uses macOS
-`SMAppService.mainApp`. Unchecking it leaves the current app running but prevents
-startup at the next login. Quit exits the current app without a watchdog
-relaunch; it does not change the login preference. New installations default to
-off. The installer migrates an older project LaunchAgent to the standard login
-item and preserves its enabled startup behavior. macOS may require approval in
-Login Items; the menu shows a mixed checkmark while approval is pending.
+- [On/off light, switch, or input_boolean](blueprints/automation/meeting_onoff.yaml)
+- [Color meeting lamp](blueprints/automation/meeting_color.yaml): configurable busy
+  and idle colors, brightness, idle-off, and disconnected behavior.
 
-The installed executable also supports `--login-status`, `--enable-login`, and
-`--disable-login` for installation/removal. These do not need Accessibility.
-To remove the helper, run `sh scripts/uninstall.sh`. It disables login startup
-and stops the app, then prints the exact files to remove manually. Revoke its
-Accessibility permission and remove its Home Assistant template when no longer
-needed. The uninstall script does not delete your configuration or credentials.
+Import the corresponding GitHub file URL in Home Assistant → Settings →
+Automations & scenes → Blueprints → Import blueprint. No lamp is controlled until
+you choose a target and enable the automation. Dashboard-only use needs no blueprint.
+
+## Availability and privacy
+
+The Mac reports every ten seconds and on changes. The integration marks the source
+**unavailable after 40 seconds** without a valid report and on Home Assistant startup.
+The YAML receiver checks every five seconds, so expiry is normally 40–45 seconds.
+Fresh false means idle; unavailable/unknown means no reliable information. If
+Accessibility is revoked, automatic idle reporting stops; an explicit manual/test
+meeting can still supply a positive state. The dashboard hides missing data.
+
+Only these output domains are supported: `light`, `switch`, `input_boolean`.
+The app does not request camera, microphone, screen recording, Contacts, Calendar,
+input monitoring, or Apple Events access. Accessibility scans Teams controls,
+skips editable fields, and does not read window titles. Busy status or microphone
+activity alone does not trigger a meeting.
+
+Pairing uses an authenticated, admin-only integration endpoint. Ongoing reports
+use a random local-only webhook; its URL is a secret. Keep credentials, connection
+imports, Home Assistant storage, and work-call screenshots out of Git. HTTPS is
+recommended. The app allows HTTP only for private addresses, localhost, .local,
+and .lan names, and refuses HTTP redirects. Being local does not itself encrypt traffic.
 
 ## Manual meetings
 
@@ -154,80 +179,56 @@ calendar data are never sent to Home Assistant; its payload remains the same
 single boolean. An intentionally started manual timer is the explicit exception
 to the connected-call requirement for automatic detection.
 
-## Required permissions
+## Start at login
 
-The app does not request microphone, camera, screen recording, input monitoring,
-Contacts, Calendar, or Apple Events permissions. It performs read-only AX queries
-against Teams. macOS describes Accessibility access broadly; it cannot grant a
-permission restricted to just the call toolbar. Startup never prompts for access;
-request it explicitly with `--request-access` if needed. The only network request
-is the configured Home Assistant boolean webhook.
+Use **Start at Login** in the Mac menu. It uses `SMAppService.mainApp`; new
+installations default to off. Turning it off does not quit the app; **Quit** does
+not change the login preference. macOS may request approval in Login Items.
+The installer preserves an existing startup preference and migrates the old
+project LaunchAgent. CLI options: `--login-status`, `--enable-login`, `--disable-login`.
 
-Development builds are ad-hoc signed. Rebuilding can invalidate the previous
-Accessibility approval even when the name and path stay the same. If a restarted
-login service still reports permission required, remove its old entry and add the
-current installed app again through System Settings. Do not reset the whole
-permission database. The background process's `observer_authorized` status is the
-relevant check; a command run from an already authorized terminal may differ.
-The running menu-bar app writes only `in_call` and `observer_authorized` to the
-private `~/Library/Application Support/MacCallIndicator/status.json` file every
-ten seconds and on call changes. Check its modification time to ensure the app
-is running; this file never contains call details or webhook credentials.
+## Dashboard example: an older Android tablet
 
-## Home Assistant
+A real-world example uses the meeting source to show **Toplantı** on an older
+HoaryDash panel. It has no green/idle indicator and controls no lamp.
 
-Merge `examples/home-assistant.yaml` into the existing template configuration.
-Generate a long random webhook ID in the private `secrets.yaml` file. The webhook
-is POST-only and local-only. Store its full URL in a mode-0600 file at:
+![Meeting badge on an actual 800 × 480 tablet](docs/images/hoarydash-call-badge.png)
 
-```text
-~/Library/Application Support/MacCallIndicator/webhook-url
-```
+Follow the [HoaryDash guide](docs/hoarydash.md) or the separate
+[older-hardware panel project](https://github.com/kilinccagatay/denver-tac-70051-home-assistant-base-station).
+That project covers the five-screen layout, tablet setup and enclosure. It is
+one optional consumer of the meeting entity.
 
-The private URL has the form `http://HOME_ASSISTANT_HOST:8123/api/webhook/YOUR_RANDOM_ID`
-(or the HTTPS equivalent). Define `mac_call_indicator_webhook` in Home Assistant's
-`secrets.yaml` with the same random ID. Reload template entities after validating
-the configuration. Keep both the secrets file and local URL file out of Git.
-Use a trusted editor to create the URL file; avoid placing the real URL in
-shell history, screenshots, or issue reports.
+## Validation and limits
 
-Use HTTPS when available. Plain HTTP provides no transport encryption; restrict
-such a setup to a trusted private LAN. Never expose the webhook to the internet.
-The helper refuses redirects, sends no cookies, and emits no endpoint in logs.
+- Swift tests cover detection, independent manual deadlines, clock input, output
+  type validation, endpoint policy, PKCE, forged callback rejection and temporary tests.
+- Isolated tests against Home Assistant **2025.3.4** cover config-entry/entity setup,
+  authenticated HTTP pairing, boolean webhook reports, expiry, reload/unload, output
+  commands, type checks, blueprints and legacy templates. No real lamp is switched
+  by this suite. Newer Home Assistant versions still need their own validation.
+- Native OAuth is implemented with discovery/PKCE and callback validation; a real
+  interactive sign-in still needs validation on the user's current server. The older
+  compatibility test server does not support native PKCE sign-in.
+- Teams **26183.1901.4874.5228** desktop test calls were validated while connected,
+  muted and ended. Ordinary work meetings and other UI languages need validation.
+  Phone/FaceTime detection is not enabled. This UI heuristic can break after Teams updates.
+- The existing HoaryDash badge and stale-state removal were tested on an actual
+  Denver TAC-70051. Clear its browser cache when dashboard changes do not appear.
 
-The helper refreshes the state every ten seconds and on changes. The receiver
-must turn the state off after 40 seconds without refresh and on startup.
-Verify this timeout on the installed Home Assistant version, including repeated
-true heartbeats and server restart, before relying on it.
+Run Mac tests with `swift test`. Run Home Assistant tests in an isolated Python
+3.13 environment using [tests_ha/requirements.txt](tests_ha/requirements.txt), then
+`python -m pytest tests_ha`. The HA dependency is pinned for reproducibility, not
+as a recommendation to downgrade a production server.
 
-Show `binary_sensor.mac_call_active` only on the HoaryDash Home screen. Treat
-unknown/unavailable as hidden. Preserve existing layout and use an ordinary red
-CSS dot if the old browser cannot render emoji. No tablet APK or firmware change
-is necessary.
-
-For a screen named `Ana`, add this card to its existing `sensors.cards` list:
-
-```yaml
-- entity_id: binary_sensor.mac_call_active
-  label: ""
-  icon: circle
-```
-
-Append `examples/hoarydash-call-badge.html` to the existing `theme.custom` string.
-The subscribed card is hidden and a small noninteractive red badge appears in
-the bottom-right corner of Ana. Other screens do not contain it. The generated
-server heartbeat timestamp lets the browser expire stale true states too;
-WebSocket disconnection hides the badge. Both machines need accurate clocks.
-Adjust the screen ID and corner offsets to match your own layout.
-
-## Privacy and publication
-
-`.local/`, `dist/`, logs, and build artifacts are ignored. The actual webhook URL
-belongs outside this repository. Do not add real endpoints, secrets, preference
-dumps, screenshots of work calls, or company logs. Home Assistant will receive
-only `{"in_call":true}` or `{"in_call":false}`.
+Ad-hoc-signed development updates can invalidate macOS Accessibility approval.
+If the app reports permission required after restarting, remove its old entry
+and add the current installed app in System Settings. Do not reset the entire
+permission database. The actual app writes only `in_call` and
+`observer_authorized` to its private App Support `status.json`; a terminal child
+may inherit different permissions. No credentials or call details are logged.
 
 This is an experimental source release, not a notarized binary distribution.
-No public repository or release is created by the build script. UI detection
-depends on Teams controls and needs validation after Teams updates; the test
-coverage and limits are listed above.
+To uninstall, run `sh scripts/uninstall.sh`, revoke Accessibility, and remove the
+Home Assistant integration/automations if no longer needed. Uninstalling does not
+delete your private configuration or credentials automatically.

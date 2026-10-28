@@ -1,0 +1,76 @@
+blueprint:
+  name: Mac Call Indicator — light, switch or input boolean
+  description: >-
+    Turn a chosen actuator on during meetings and off when idle. Uses fresh
+    Mac Call Indicator reports; missing reports never mean verified idle.
+    No dashboard automation is needed for a status-only badge.
+  domain: automation
+  input:
+    meeting_entity:
+      name: Meeting source
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+    target_entity:
+      name: Entity to control
+      description: Choose an on/off light, switch, or input_boolean. Read-only sensors and person entities cannot be controlled.
+      selector:
+        entity:
+          filter:
+            - domain: light
+            - domain: switch
+            - domain: input_boolean
+    offline_action:
+      name: When reports stop
+      default: "off"
+      selector:
+        select:
+          options:
+            - label: Turn target off
+              value: "off"
+            - label: Leave target unchanged
+              value: hold
+mode: restart
+variables:
+  source: !input meeting_entity
+  target_id: !input target_entity
+  offline: !input offline_action
+  fresh: >-
+    {% set age = as_timestamp(now()) - (state_attr(source, 'last_report_epoch') | float(0)) %}
+    {{ states(source) in ['on', 'off'] and age >= -5 and age < 40 }}
+triggers:
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: "on"
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: "off"
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: unavailable
+  - trigger: state
+    entity_id: !input meeting_entity
+    to: unknown
+  - trigger: homeassistant
+    event: start
+  - trigger: time_pattern
+    seconds: "/5"
+    id: watchdog
+conditions:
+  - condition: template
+    value_template: "{{ target_id.split('.')[0] in ['light', 'switch', 'input_boolean'] }}"
+  - condition: template
+    value_template: "{{ trigger.id != 'watchdog' or (not fresh and offline == 'off' and is_state(target_id, 'on')) }}"
+actions:
+  - choose:
+      - conditions: "{{ fresh }}"
+        sequence:
+          - action: "{{ target_id.split('.')[0] ~ ('.turn_on' if is_state(source, 'on') else '.turn_off') }}"
+            target:
+              entity_id: "{{ target_id }}"
+      - conditions: "{{ offline == 'off' }}"
+        sequence:
+          - action: "{{ target_id.split('.')[0] ~ '.turn_off' }}"
+            target:
+              entity_id: "{{ target_id }}"
