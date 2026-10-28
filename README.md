@@ -16,6 +16,15 @@ The Home badge has a larger red dot above a centered **Toplantı** label, with
 enough clearance from the navigation bar. Change the label in the HTML snippet
 if you prefer another language. The Mac menu remains in English.
 
+## Features
+
+- Automatic Teams call detection through local macOS Accessibility controls.
+- Manual meeting status until a chosen time, or instantly for 30 minutes / 1 hour.
+- Android-style circular time picker with mouse, keyboard, and accessibility support.
+- Remaining minutes in the menu bar, with an option to end a manual meeting early.
+- Optional **Start at Login**, controlled from the menu bar.
+- Home Assistant and HoaryDash integration using only a boolean, with stale-state expiry.
+
 ## Current status
 
 The Teams desktop test call exposed Leave, microphone controls, and a timer via
@@ -86,23 +95,52 @@ needed. The uninstall script does not delete your configuration or credentials.
 
 ## Manual meetings
 
-The English menu offers **Meeting until…**, **30 min meeting**, and
-**1 hour meeting**. Meeting until opens a compact Android-style 24-hour clock dial, editable hour/minute fields, and a
-remaining-minutes preview. Presets start immediately. The menu-bar icon shows
-the remaining minutes, and the menu shows the end time and **End manual meeting**.
+Open the Mac menu-bar icon to use these English menu options:
+
+| Menu option | Behavior |
+| --- | --- |
+| **Meeting until…** | Opens the circular time picker; starts only after confirmation. |
+| **30 min meeting** | Starts a manual meeting for 30 minutes immediately. |
+| **1 hour meeting** | Starts a manual meeting for one hour immediately. |
+| **End manual meeting** | Cancels only the manual timer; appears while one is active. |
+
+### Circular time picker
+
+The compact picker contains only an end time, a clock dial, a remaining-minutes
+preview, and **Cancel / Start meeting**. There is no date picker.
+
+1. Click an hour on the dial or drag the clock hand to it. The outer ring is
+   **1–12**; the inner ring is **13–23 and 00** for 24-hour time.
+2. Release to move to minute selection, then click or drag to choose a minute.
+   Any minute can be selected; the dial labels mark five-minute intervals.
+3. Use **Hour / Minute** to switch between the two selections whenever needed.
+4. Check the remaining minutes, then click **Start meeting**.
+
+A keyboard is optional: click either number to type its value, or use the
+up/down arrow keys. The dial also supports keyboard adjustment and accessibility
+increment/decrement actions. Invalid input disables **Start meeting**. The
+interface follows the Mac's light or dark appearance.
+
+The picker uses the **next occurrence** of the selected local time. For example,
+at 23:45, choosing 00:15 creates a 30-minute meeting. At 14:00, choosing 13:00
+means 23 hours from now; check the preview to avoid an unintended long timer.
 
 The app stores the absolute deadline locally and derives remaining minutes from
 the Mac's clock, rounding up. It resumes an unexpired deadline after an app
-restart. Expired deadlines are cleared automatically. The picker uses the next occurrence of the selected local time, including after
-midnight. Check the remaining-minutes preview before starting. Click or drag on the dial to select an hour; releasing moves to minute selection.
-The Hour/Minute control switches back at any time. Outer hour numbers are 1–12;
-inner numbers are 13–23 and 00. Type values or use arrow keys as an alternative.
-Invalid times disable Start meeting. No date selection or keyboard is required.
+restart. Expired deadlines are cleared automatically. The menu-bar icon shows
+remaining minutes; the menu shows the end time and remaining minutes as well.
+
+### Calls do not interrupt a manual meeting
 
 Manual and detected-call states are independent: the reported boolean is true
 when either is active. A Teams call starting or ending never cancels, resets, or
 extends a manual deadline. Ending the manual timer also leaves an actual call
 active. When the manual timer expires, automatic Teams detection continues.
+
+For example, start **1 hour meeting**, then take a ten-minute Teams call.
+Ending that call leaves the original manual deadline unchanged. If a Teams call
+is still active when the manual timer expires, the dashboard indicator stays on
+until that call ends.
 
 Manual meetings do not require Accessibility. End times, remaining minutes, and
 calendar data are never sent to Home Assistant; its payload remains the same
