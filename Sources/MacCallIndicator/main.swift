@@ -163,10 +163,13 @@ func updateCallState() {
         if value { attributed.addAttribute(.foregroundColor, value: NSColor.systemRed, range: NSRange(location: 0, length: 1)) }
         statusItem.button?.attributedTitle = attributed
         if let minutes = minutes {
-            statusLine.title = "Manual meeting · \(minutes) min remaining"
+            statusLine.title = "Manual meeting · \(minutes) min remaining" +
+                (authorized ? "" : " · Accessibility permission required — Open Settings…")
         } else {
-            statusLine.title = !authorized ? "Accessibility permission required" : detected ? "Call active" : "No active call"
+            statusLine.title = !authorized ? "Accessibility permission required — Open Settings…" : detected ? "Call active" : "No active call"
         }
+        AccessibilityPermission.shared.configure(statusLine, authorized: authorized)
+        connectionMenu.refreshPermissionNotice()
         manualMenu.refresh()
     }
     if value != lastValue || now.timeIntervalSince(lastSend) >= 10 {

@@ -21,6 +21,7 @@ import ApplicationServices
     private var targetGroup: NSView?
     private var colorGroups: [NSView] = []
     private var offlineGroup: NSView?
+    private var permissionNotice: NSView?
     private let idleOff = NSButton(checkboxWithTitle: "Turn off when idle instead of using idle color", target: nil, action: nil)
     private let offline = NSPopUpButton()
     private let status = NSTextField(wrappingLabelWithString: "")
@@ -131,6 +132,15 @@ import ApplicationServices
 
     private func connectionView() -> NSStackView {
         let body = stack()
+        let notice = stack()
+        notice.spacing = 8
+        let permissionButton = NSButton(title: "Open Accessibility Settings…",
+            target: AccessibilityPermission.shared, action: #selector(AccessibilityPermission.openSettings))
+        permissionButton.bezelStyle = .rounded
+        add(text("Automatic Teams detection needs Accessibility permission. " + AccessibilityPermission.instructions), to: notice)
+        notice.addArrangedSubview(permissionButton)
+        add(notice, to: body)
+        permissionNotice = notice
         if config.server.isEmpty, let old = store.endpoint(), var parts = URLComponents(url: old, resolvingAgainstBaseURL: false) {
             parts.path = ""; config.server = parts.url?.absoluteString ?? ""
         }
@@ -231,8 +241,13 @@ import ApplicationServices
         idleOff.isEnabled = integration && mode == .lightColor && !working
         offline.isEnabled = integration && mode != .statusOnly && !working
         save.isEnabled = !working; test.isEnabled = !working; disconnect.isEnabled = !working
-        sendTest.isEnabled = store.endpoint() != nil && !working && AXIsProcessTrusted()
+        refreshPermissionNotice()
         sendTest.toolTip = "Requires automatic call detection permission so the test can return to a known state after 10 seconds."
+    }
+    func refreshPermissionNotice() {
+        let authorized = AXIsProcessTrusted()
+        permissionNotice?.isHidden = authorized
+        sendTest.isEnabled = store.hasConnection && !working && authorized
     }
     @objc private func transportChanged() { secret.stringValue = ""; updateControls() }
     @objc private func useDefaultAddress() {

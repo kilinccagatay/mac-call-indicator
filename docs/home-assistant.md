@@ -34,6 +34,13 @@ Existing entities, dashboards and YAML receivers are not migrated automatically.
 
 ## Connection and default address
 
+For automatic Teams detection, enable the Mac app under macOS **Privacy &
+Security → Accessibility**. Click the menu's **Accessibility permission required —
+Open Settings…** row, or the button in **Settings → Connection**, to open that
+page. The app requests permission only after your click. If a signed-binary update
+invalidated an enabled entry, replace that old entry with the installed app and
+restart when macOS asks. Manual meeting timers do not need this permission.
+
 **Use default** fills **http://homeassistant.local:8123/** when clicked. It never
 saves or starts authentication. Local mDNS discovery must work on your network;
 otherwise enter the IP address or HTTPS hostname manually.

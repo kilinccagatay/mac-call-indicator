@@ -48,7 +48,8 @@ with zipfile.ZipFile(out / f"MacCallIndicator-HomeAssistant-v{version}.zip", "w"
     archive.writestr("INSTALL.txt", "Copy custom_components/mac_call_indicator to your Home Assistant config folder, restart, then add Mac Call Indicator under Devices & services. See the repository Home Assistant guide.\n")
 with zipfile.ZipFile(out / f"MacCallIndicator-Screenshots-v{version}.zip", "w", zipfile.ZIP_DEFLATED) as archive:
     for name in ["settings-connection.png", "settings-status-only.png", "settings-color-light.png",
-                 "meeting-until-hour.png", "meeting-until-minute.png", "hoarydash-call-badge.png"]:
+                 "meeting-until-hour.png", "meeting-until-minute.png", "hoarydash-call-badge.png",
+                 "accessibility-help.png"]:
         file = Path("docs/images") / name
         archive.write(file, name)
 lines = [f"{hashlib.sha256(file.read_bytes()).hexdigest()}  {file.name}\n"

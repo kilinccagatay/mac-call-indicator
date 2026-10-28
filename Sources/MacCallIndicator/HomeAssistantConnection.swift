@@ -133,6 +133,9 @@ final class ConnectionStore {
         return config
     }
     var configured: Bool { UserDefaults.standard.data(forKey: key) != nil }
+    // UI availability must not synchronously unlock Keychain or show a prompt
+    // while a Settings window is still being constructed.
+    var hasConnection: Bool { configured ? settings.enabled : webhookURL() != nil }
     func endpoint() -> URL? {
         guard configured else {
             return webhookURL().flatMap { try? EndpointPolicy.validate($0.absoluteString) }

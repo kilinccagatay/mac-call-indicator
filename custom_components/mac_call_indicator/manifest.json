@@ -1,7 +1,7 @@
 {
   "domain": "mac_call_indicator",
   "name": "Mac Call Indicator",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "config_flow": true,
   "documentation": "https://github.com/kilinccagatay/mac-call-indicator",
   "issue_tracker": "https://github.com/kilinccagatay/mac-call-indicator/issues",

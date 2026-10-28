@@ -181,6 +181,20 @@ calendar data are never sent to Home Assistant; its payload remains the same
 single boolean. An intentionally started manual timer is the explicit exception
 to the connected-call requirement for automatic detection.
 
+## Accessibility permission shortcut
+
+If permission is missing, click **Accessibility permission required — Open Settings…**
+in the menu bar. It opens the normal macOS Accessibility page. The same
+**Open Accessibility Settings…** button appears under **Settings → Connection**,
+with instructions. The warning disappears when permission is detected.
+
+Enable **MacCallIndicator**. If it already appears enabled after an ad-hoc-signed
+update, remove the old entry and add the current installed app again. Restart
+the app if macOS requests it. Permission is never granted automatically; no
+camera, microphone or screen-recording access is needed.
+
+<img src="docs/images/accessibility-help.png" alt="Missing Accessibility permission instructions and Open Accessibility Settings button" width="420">
+
 ## Start at login
 
 Use **Start at Login** in the Mac menu. It uses `SMAppService.mainApp`; new
