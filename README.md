@@ -30,7 +30,7 @@ Receiver validation used six synthetic boolean heartbeats ten seconds apart.
 The badge remained visible beyond the initial 40-second window. After reports
 stopped, the browser hid the badge and the Home Assistant entity was confirmed
 off at 48 seconds after the last report. Navigating to another dashboard tab
-also removed the badge from view. Nine unit tests cover detection and independent manual deadlines.
+also removed the badge from view. Eleven unit tests cover detection and independent manual deadlines.
 The badge was also verified on a Denver TAC-70051 running the Crosswalk-based
 WallPanel Legacy browser. Its old HTTP cache initially retained the previous
 dashboard; restarting the app alone did not refresh it. Refresh the page with
@@ -87,14 +87,17 @@ needed. The uninstall script does not delete your configuration or credentials.
 ## Manual meetings
 
 The English menu offers **Meeting until…**, **30 min meeting**, and
-**1 hour meeting**. Meeting until opens a native local date/time picker with a
+**1 hour meeting**. Meeting until opens a compact Android-style 24-hour clock dial, editable hour/minute fields, and a
 remaining-minutes preview. Presets start immediately. The menu-bar icon shows
 the remaining minutes, and the menu shows the end time and **End manual meeting**.
 
 The app stores the absolute deadline locally and derives remaining minutes from
 the Mac's clock, rounding up. It resumes an unexpired deadline after an app
-restart. Expired deadlines are cleared automatically. Changing the selected
-date permits a meeting that ends after midnight without guessing the next day.
+restart. Expired deadlines are cleared automatically. The picker uses the next occurrence of the selected local time, including after
+midnight. Check the remaining-minutes preview before starting. Click or drag on the dial to select an hour; releasing moves to minute selection.
+The Hour/Minute control switches back at any time. Outer hour numbers are 1–12;
+inner numbers are 13–23 and 00. Type values or use arrow keys as an alternative.
+Invalid times disable Start meeting. No date selection or keyboard is required.
 
 Manual and detected-call states are independent: the reported boolean is true
 when either is active. A Teams call starting or ending never cancels, resets, or

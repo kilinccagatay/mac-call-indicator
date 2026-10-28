@@ -51,3 +51,13 @@ final class ManualMeetingState {
         callDetected || (manualUntil.map { $0 > now } ?? false)
     }
 }
+
+enum ManualMeetingTime {
+    /// A time-only picker refers to the next occurrence of that local time.
+    static func next(hour: Int, minute: Int, now: Date, calendar: Calendar = .current) -> Date? {
+        guard (0..<24).contains(hour), (0..<60).contains(minute) else { return nil }
+        return calendar.nextDate(after: now, matching: DateComponents(hour: hour, minute: minute, second: 0),
+                                 matchingPolicy: .strict, repeatedTimePolicy: .first)
+    }
+
+}

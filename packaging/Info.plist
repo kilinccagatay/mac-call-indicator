@@ -5,7 +5,7 @@
   <key>CFBundleExecutable</key><string>MacCallIndicator</string>
   <key>CFBundleName</key><string>Mac Call Indicator</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>2</string>
-  <key>CFBundleShortVersionString</key><string>0.2.0</string>
+  <key>CFBundleVersion</key><string>3</string>
+  <key>CFBundleShortVersionString</key><string>0.2.1</string>
   <key>LSUIElement</key><true/>
 </dict></plist>
