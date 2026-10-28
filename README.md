@@ -262,7 +262,10 @@ both architectures, strips debug symbols, verifies the ad-hoc signature and macO
 13 deployment targets, excludes user configuration, checks for private build
 paths, and generates SHA-256 checksums. Generated packages stay in ignored dist/.
 
-This remains an experimental project.
+This is an experimental hobby project. Use it at your own risk, and verify
+its behavior with your own Mac, Teams version, Home Assistant instance, and
+chosen output before relying on the signal.
+
 To uninstall, run `sh scripts/uninstall.sh`, revoke Accessibility, and remove the
 Home Assistant integration/automations if no longer needed. Uninstalling does not
 delete your private configuration or credentials automatically.
