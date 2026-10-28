@@ -113,7 +113,10 @@ if arguments.contains("--request-access") {
     exit(0)
 }
 if arguments.contains("--once") || arguments.contains("--diagnose") {
-    print("{\"in_call\":\(connectedCall()),\"observer_authorized\":\(AXIsProcessTrusted())}")
+    let manual = ManualMeetingState()
+    let now = Date()
+    let value = ManualMeetingState.isMeeting(callDetected: connectedCall(), manualUntil: manual.deadline(now: now), now: now)
+    print("{\"in_call\":\(value),\"observer_authorized\":\(AXIsProcessTrusted())}")
     exit(0)
 }
 
@@ -126,6 +129,10 @@ let menu = NSMenu()
 let statusLine = NSMenuItem(title: "Checking Accessibility permission…", action: nil, keyEquivalent: "")
 menu.addItem(statusLine)
 menu.addItem(.separator())
+let manualMeeting = ManualMeetingState()
+let manualMenu = ManualMeetingMenu(state: manualMeeting)
+manualMenu.add(to: menu)
+menu.addItem(.separator())
 let loginLaunch = LoginLaunch()
 loginLaunch.add(to: menu)
 menu.addItem(.separator())
@@ -136,14 +143,25 @@ var lastSend = Date.distantPast
 let pollQueue = DispatchQueue(label: "local.MacCallIndicator.poll")
 let pollTimer = DispatchSource.makeTimerSource(queue: pollQueue)
 pollTimer.schedule(deadline: .now(), repeating: 2)
-pollTimer.setEventHandler {
-    let value = autoreleasepool { connectedCall() }
+func updateCallState() {
+    let detected = autoreleasepool { connectedCall() }
     let authorized = AXIsProcessTrusted()
-    DispatchQueue.main.async {
-        statusItem.button?.title = value ? "●" : "○"
-        statusLine.title = !authorized ? "Accessibility permission required" : value ? "Call active" : "No active call"
-    }
     let now = Date()
+    let until = manualMeeting.deadline(now: now)
+    let value = ManualMeetingState.isMeeting(callDetected: detected, manualUntil: until, now: now)
+    DispatchQueue.main.async {
+        let minutes = until.map { ManualMeetingState.remainingMinutes(until: $0, now: Date()) }
+        let title = minutes.map { "● \($0)m" } ?? (value ? "●" : "○")
+        let attributed = NSMutableAttributedString(string: title)
+        if value { attributed.addAttribute(.foregroundColor, value: NSColor.systemRed, range: NSRange(location: 0, length: 1)) }
+        statusItem.button?.attributedTitle = attributed
+        if let minutes = minutes {
+            statusLine.title = "Manual meeting · \(minutes) min remaining"
+        } else {
+            statusLine.title = !authorized ? "Accessibility permission required" : detected ? "Call active" : "No active call"
+        }
+        manualMenu.refresh()
+    }
     if value != lastValue || now.timeIntervalSince(lastSend) >= 10 {
         // Local diagnostics from the actual menu-bar process, rather than a
         // terminal child that may inherit a different Accessibility approval.
@@ -169,5 +187,7 @@ pollTimer.setEventHandler {
         lastValue = value
     }
 }
+manualMenu.onChange = { pollQueue.async { updateCallState() } }
+pollTimer.setEventHandler { updateCallState() }
 pollTimer.resume()
 application.run()

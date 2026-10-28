@@ -1,6 +1,6 @@
 # Mac Call Indicator
 
-Experimental, local-only call status for Home Assistant and old HoaryDash panels.
+Experimental, local-only call and manual-meeting status for Home Assistant and old HoaryDash panels.
 It sends exactly one boolean, `in_call`, without meeting titles, numbers,
 participants, calendar access, Microsoft Graph, Entra registration, or Teams tokens.
 
@@ -30,7 +30,7 @@ Receiver validation used six synthetic boolean heartbeats ten seconds apart.
 The badge remained visible beyond the initial 40-second window. After reports
 stopped, the browser hid the badge and the Home Assistant entity was confirmed
 off at 48 seconds after the last report. Navigating to another dashboard tab
-also removed the badge from view. Five unit tests cover the detection rules.
+also removed the badge from view. Nine unit tests cover detection and independent manual deadlines.
 The badge was also verified on a Denver TAC-70051 running the Crosswalk-based
 WallPanel Legacy browser. Its old HTTP cache initially retained the previous
 dashboard; restarting the app alone did not refresh it. Refresh the page with
@@ -83,6 +83,28 @@ To remove the helper, run `sh scripts/uninstall.sh`. It disables login startup
 and stops the app, then prints the exact files to remove manually. Revoke its
 Accessibility permission and remove its Home Assistant template when no longer
 needed. The uninstall script does not delete your configuration or credentials.
+
+## Manual meetings
+
+The English menu offers **Meeting until…**, **30 min meeting**, and
+**1 hour meeting**. Meeting until opens a native local date/time picker with a
+remaining-minutes preview. Presets start immediately. The menu-bar icon shows
+the remaining minutes, and the menu shows the end time and **End manual meeting**.
+
+The app stores the absolute deadline locally and derives remaining minutes from
+the Mac's clock, rounding up. It resumes an unexpired deadline after an app
+restart. Expired deadlines are cleared automatically. Changing the selected
+date permits a meeting that ends after midnight without guessing the next day.
+
+Manual and detected-call states are independent: the reported boolean is true
+when either is active. A Teams call starting or ending never cancels, resets, or
+extends a manual deadline. Ending the manual timer also leaves an actual call
+active. When the manual timer expires, automatic Teams detection continues.
+
+Manual meetings do not require Accessibility. End times, remaining minutes, and
+calendar data are never sent to Home Assistant; its payload remains the same
+single boolean. An intentionally started manual timer is the explicit exception
+to the connected-call requirement for automatic detection.
 
 ## Required permissions
 
