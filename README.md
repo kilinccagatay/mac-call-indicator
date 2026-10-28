@@ -109,6 +109,13 @@ Open the Mac menu-bar icon to use these English menu options:
 The compact picker contains only an end time, a clock dial, a remaining-minutes
 preview, and **Cancel / Start meeting**. There is no date picker.
 
+| Hour selection · 24-hour dial | Minute selection · any minute |
+| :---: | :---: |
+| <img src="docs/images/meeting-until-hour.png" alt="Meeting until dialog showing the outer and inner hour rings, editable time, and remaining minutes" width="280"> | <img src="docs/images/meeting-until-minute.png" alt="Meeting until dialog showing the minute dial with 44 selected and a remaining-minutes preview" width="280"> |
+
+Screenshots show the app's actual picker in an isolated local preview; no
+meeting was started and no call information or credentials are included.
+
 1. Click an hour on the dial or drag the clock hand to it. The outer ring is
    **1–12**; the inner ring is **13–23 and 00** for 24-hour time.
 2. Release to move to minute selection, then click or drag to choose a minute.
