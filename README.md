@@ -31,8 +31,10 @@ of the same target.
 
 ## Quick start
 
-1. Build/install the Mac app: `sh scripts/install.sh` (macOS 13+, Xcode command-line
-   tools, Swift 5.9+). Grant Accessibility through normal macOS settings if you want
+1. Download the **universal macOS app** from [Releases](https://github.com/kilinccagatay/mac-call-indicator/releases),
+   unzip it and move it to your Applications folder. Or build/install from source
+   with `sh scripts/install.sh` (Xcode command-line tools, Swift 5.9+).
+   The deployment target is macOS 13+. Grant Accessibility through normal settings if you want
    automatic Teams detection. Manual timers do not require that permission.
 2. Install and add the [Home Assistant integration](docs/home-assistant.md#install-the-integration).
 3. Open the Mac menu → **Settings… → Connection**. Enter your Home Assistant URL,
@@ -207,9 +209,13 @@ one optional consumer of the meeting entity.
   authenticated HTTP pairing, boolean webhook reports, expiry, reload/unload, output
   commands, type checks, blueprints and legacy templates. No real lamp is switched
   by this suite. Newer Home Assistant versions still need their own validation.
-- Native OAuth is implemented with discovery/PKCE and callback validation; a real
-  interactive sign-in still needs validation on the user's current server. The older
-  compatibility test server does not support native PKCE sign-in.
+- Native OAuth sign-in, token refresh, entity listing and admin pairing were
+  validated on **Home Assistant 2026.10.0**. The older compatibility test server
+  does not support native PKCE sign-in.
+- A physical **Philips Hue Iris** (XY color mode) was tested through the installed
+  Mac app: idle green → ten-second meeting red → idle green → off after reporter
+  loss. The observer confirmed the physical colors. The source became unavailable;
+  the previous lamp state and existing dashboard webhook were restored afterward.
 - Teams **26183.1901.4874.5228** desktop test calls were validated while connected,
   muted and ended. Ordinary work meetings and other UI languages need validation.
   Phone/FaceTime detection is not enabled. This UI heuristic can break after Teams updates.
@@ -228,7 +234,21 @@ permission database. The actual app writes only `in_call` and
 `observer_authorized` to its private App Support `status.json`; a terminal child
 may inherit different permissions. No credentials or call details are logged.
 
-This is an experimental source release, not a notarized binary distribution.
+## Downloadable release and packaging
+
+The release includes a universal **Apple Silicon + Intel** app, the Home Assistant
+integration ZIP, a screenshots ZIP and **SHA256SUMS.txt**. The app is **ad-hoc signed,
+not Developer ID signed or Apple notarized**. macOS may block downloaded builds;
+the source build is an alternative. No scripts disable Gatekeeper or remove quarantine.
+The Apple Silicon build was exercised on the development Mac; the Intel slice is
+cross-compiled and has not been run on physical Intel hardware.
+
+Run `sh scripts/package-release.sh` on a Mac to reproduce the packages. It builds
+both architectures, strips debug symbols, verifies the ad-hoc signature and macOS
+13 deployment targets, excludes user configuration, checks for private build
+paths, and generates SHA-256 checksums. Generated packages stay in ignored dist/.
+
+This remains an experimental project.
 To uninstall, run `sh scripts/uninstall.sh`, revoke Accessibility, and remove the
 Home Assistant integration/automations if no longer needed. Uninstalling does not
 delete your private configuration or credentials automatically.

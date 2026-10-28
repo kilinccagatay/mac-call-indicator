@@ -195,6 +195,12 @@ For legacy browsers see [the optional HoaryDash guide](hoarydash.md).
 5. Reconnect. Fresh true/false reports restore on/off availability.
 6. Restart Home Assistant. Never show green before a fresh false report.
 
+On Home Assistant **2026.10.0**, native sign-in, refresh, entity listing and pairing
+were exercised with the actual Mac app. A Philips Hue Iris in XY mode physically
+showed idle green, meeting red, green after the temporary test ended, and off after
+the Mac reporter stopped. The source became unavailable. Its original scene and
+the prior dashboard-only webhook connection were restored after validation.
+
 The source's **last_report_epoch** attribute supports stale-state dashboards.
 **output_ok** indicates the last built-in target operation. If false, check the
 target exists, supports the mode and is reachable. Failures retry on a subsequent
