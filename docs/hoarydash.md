@@ -31,5 +31,5 @@ second. Credentials never belong in the dashboard. Both devices need accurate cl
 Clear the old browser's cache if changes appear on a desktop but not the tablet.
 No tablet APK, firmware or root-helper update is needed.
 
-The [older-hardware panel project](https://github.com/kilinccagatay/denver-tac-70051-home-assistant-base-station)
+The [older-hardware panel project](https://github.com/kilinccagatay/home-assistant-legacy-panels)
 contains the full layout, entity mappings, tablet setup and enclosure.
