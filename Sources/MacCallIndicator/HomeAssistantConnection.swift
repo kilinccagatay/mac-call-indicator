@@ -219,6 +219,12 @@ final class HomeAssistantClient {
               let path = result["webhook_path"] as? String, path.hasPrefix("/api/webhook/"),
               !path.contains("?"), !path.contains("#"), !path.contains(".."),
               let entity = result["entity_id"] as? String, entity.hasPrefix("binary_sensor.") else { throw ConnectionError.invalidResponse }
+        if let agendaPath = result["agenda_webhook_path"] as? String,
+           agendaPath.hasPrefix("/api/webhook/"), !agendaPath.contains("?"), !agendaPath.contains("#"), !agendaPath.contains(".."),
+           let agendaEntity = result["agenda_entity_id"] as? String, agendaEntity.hasPrefix("sensor.") {
+            try AgendaSettings().saveReceiver(server.appendingPathComponent(String(agendaPath.dropFirst())).absoluteString)
+            UserDefaults.standard.set(agendaEntity, forKey: "calendarAgendaEntity")
+        }
         return (server.appendingPathComponent(String(path.dropFirst())).absoluteString, entity)
     }
     func entities(mode: OutputMode) async throws -> [String] {

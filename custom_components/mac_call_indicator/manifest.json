@@ -1,12 +1,17 @@
 {
   "domain": "mac_call_indicator",
   "name": "Mac Call Indicator",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "config_flow": true,
   "documentation": "https://github.com/kilinccagatay/mac-call-indicator",
   "issue_tracker": "https://github.com/kilinccagatay/mac-call-indicator/issues",
-  "codeowners": ["@kilinccagatay"],
+  "codeowners": [
+    "@kilinccagatay"
+  ],
   "iot_class": "local_push",
   "requirements": [],
-  "dependencies": ["webhook", "http"]
+  "dependencies": [
+    "webhook",
+    "http"
+  ]
 }

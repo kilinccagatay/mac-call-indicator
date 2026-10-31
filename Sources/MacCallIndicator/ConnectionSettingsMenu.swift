@@ -33,6 +33,7 @@ import ApplicationServices
     private let sendTest = NSButton(title: "Test meeting for 10 seconds", target: nil, action: nil)
     private let disconnect = NSButton(title: "Disconnect", target: nil, action: nil)
     private let authentication = HomeAssistantSignIn()
+    private let calendarSettings = CalendarSettingsView()
     private var working = false
     var onChange: (() -> Void)?
     var onTest: (() -> Void)?
@@ -95,7 +96,7 @@ import ApplicationServices
         ])
         let tabs = NSTabView()
         tabs.heightAnchor.constraint(equalToConstant: 460).isActive = true
-        for (title, body) in [("Connection", connectionView()), ("Output", outputView())] {
+        for (title, body) in [("Connection", connectionView()), ("Output", outputView()), ("Calendar", calendarSettings.makeView())] {
             let item = NSTabViewItem(identifier: title); item.label = title
             let scroll = NSScrollView()
             scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true

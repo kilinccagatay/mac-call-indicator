@@ -9,6 +9,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEASE_SECONDS, PLATFORMS
 from .policy import command_for, validate_output
+from .agenda import AgendaRuntime
 
 
 async def async_setup(hass, config):
@@ -18,10 +19,14 @@ async def async_setup(hass, config):
 
 
 async def async_setup_entry(hass, entry):
+    if not entry.data.get("agenda_webhook_id"):
+        hass.config_entries.async_update_entry(entry, data={**entry.data, "agenda_webhook_id": webhook.async_generate_id()})
     runtime = MeetingRuntime(hass, entry)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
     webhook.async_register(hass, DOMAIN, entry.title, entry.data["webhook_id"],
                            runtime.receive, local_only=True, allowed_methods=["POST"])
+    webhook.async_register(hass, DOMAIN, entry.title + " agenda", entry.data["agenda_webhook_id"],
+                           runtime.agenda.receive, local_only=True, allowed_methods=["POST"])
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     await runtime.apply_output()
@@ -39,6 +44,7 @@ async def async_unload_entry(hass, entry):
         return False
     runtime = hass.data[DOMAIN].pop(entry.entry_id)
     webhook.async_unregister(hass, entry.data["webhook_id"])
+    webhook.async_unregister(hass, entry.data["agenda_webhook_id"])
     await runtime.close()
     return True
 
@@ -55,6 +61,7 @@ class MeetingRuntime:
         self.closed = False
         self._config = {**entry.data, **entry.options}
         self.output_ok = True
+        self.agenda = AgendaRuntime(hass, self.notify)
 
     @property
     def config(self):
@@ -121,6 +128,7 @@ class MeetingRuntime:
                 await self.apply_output()
 
     async def close(self):
+        await self.agenda.close()
         async with self.lock:
             self.closed = True
             if self.cancel_expiry:

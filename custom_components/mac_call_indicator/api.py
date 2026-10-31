@@ -1,6 +1,7 @@
 """Admin-authenticated one-time pairing; ongoing reports use only a webhook."""
 import uuid
 from aiohttp import web
+from homeassistant.components import webhook
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.components.http.const import KEY_HASS_USER
 from homeassistant.helpers import entity_registry as er
@@ -40,7 +41,7 @@ class PairView(HomeAssistantView):
             # Claim the entry created when the integration was first added.
             entry = next((e for e in entries if not e.data.get("client_id")), None)
         if entry:
-            updated = {**data, "webhook_id": entry.data["webhook_id"]}
+            updated = {**data, "webhook_id": entry.data["webhook_id"], "agenda_webhook_id": entry.data.get("agenda_webhook_id") or webhook.async_generate_id()}
             hass.config_entries.async_update_entry(entry, title=data["name"], data=updated,
                                                    options={}, unique_id=data["client_id"])
         else:
@@ -55,4 +56,6 @@ class PairView(HomeAssistantView):
             "webhook_path": f"/api/webhook/{entry.data['webhook_id']}",
             "entity_id": sensor,
             "lease_seconds": 40,
+            "agenda_webhook_path": f"/api/webhook/{entry.data['agenda_webhook_id']}",
+            "agenda_entity_id": registry.async_get_entity_id("sensor", DOMAIN, entry.entry_id + "_agenda") or "sensor.mac_call_agenda_" + entry.entry_id.lower(),
         })

@@ -228,3 +228,28 @@ async def test_legacy_template_rejects_invalid_idle_and_expires(hass):
     assert Template(entity["availability"], hass).async_render(variables) is True
     variables["trigger"] = {"id": "startup"}
     assert Template(entity["availability"], hass).async_render(variables) is False
+
+
+@pytest.mark.asyncio
+async def test_agenda_entity_is_separate_from_call_state(hass):
+    import json
+    entry, runtime = await create_entry(hass)
+    now = dt_util.utcnow().timestamp()
+    body = {"available": True, "generated_at": now, "valid_until": now + 90,
+            "day_start": now - 1000, "day_end": now - 1000 + 86400,
+            "events": [{"title": "Synthetic example", "start": now, "end": now + 100}]}
+    content = asyncio.StreamReader()
+    content.feed_data(json.dumps(body).encode()); content.feed_eof()
+    assert (await runtime.agenda.receive(hass, "", SimpleNamespace(content=content))).status == 200
+    await hass.async_block_till_done()
+    agenda_id = "sensor.mac_call_agenda_" + entry.entry_id.lower()
+    agenda = hass.states.get(agenda_id)
+    assert agenda.state == "ready" and len(agenda.attributes["events"]) == 1
+    assert runtime.in_call is None, "Agenda must not write the actual call report or actuate outputs"
+    await runtime.receive(hass, "", Report({"in_call": True}))
+    runtime.agenda.report["valid_until"] = now - 1
+    await runtime.agenda.expire(None)
+    await hass.async_block_till_done()
+    assert hass.states.get(agenda_id).state == "unavailable"
+    assert hass.states.get(agenda_id).attributes.get("events", []) == []
+    assert runtime.in_call is True, "Agenda expiry cannot cancel a real call"
