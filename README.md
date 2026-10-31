@@ -43,10 +43,12 @@ meeting reminder. General macOS Now Playing/Plex control is **not included**.
 [Calendar setup](docs/calendar-agenda.md) · [Home Assistant guide](docs/home-assistant.md) ·
 [Release notes](CHANGELOG.md) · [Panel examples](https://github.com/kilinccagatay/home-assistant-legacy-panels)
 
-![Office agenda layout with synthetic event titles](docs/images/office-agenda-demo.jpg)
+![Actual Samsung office panel, meeting title hidden](docs/images/samsung-office-home.png)
 
-This is a synthetic consumer example. A tablet is optional; use the meeting source
-for a lamp or any other Home Assistant automation instead.
+This is an actual Samsung SM-J510FN screenshot. The meeting-title area alone was
+covered for privacy and labelled “Toplantı adı gizlendi”; no real meeting title is
+published. A tablet is optional: the meeting source can control a lamp or any
+other Home Assistant automation instead.
 
 ## Choose your output
 
