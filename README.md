@@ -4,10 +4,49 @@ Turn your Mac's meeting status into a Home Assistant entity. Use it for a door-s
 meeting lamp, an RGB desk light, a switch, an input boolean, or a dashboard badge.
 No tablet is required.
 
-The Mac sends only `{"in_call":true}` or `{"in_call":false}`. Meeting titles,
-participants, phone numbers, messages, and calendar contents never leave the Mac.
+The default call channel sends only `{"in_call":true}` or `{"in_call":false}`.
+Participants, phone numbers and messages never leave the Mac. Optional Calendar
+sharing sends selected meeting titles and times through a separate agenda channel;
+it is disabled until you explicitly enable it.
 Automatic detection currently targets Teams desktop; manual meeting timers work
 independently of calls.
+
+## What the app does
+
+| Feature | What reaches Home Assistant | Setup |
+| --- | --- | --- |
+| Teams call detection | Meeting on/off with heartbeat | Optional Accessibility permission |
+| Manual meeting timer | Same meeting source; independent deadline | 30 minutes, one hour, or a visual end-time picker |
+| Optional workday agenda | Selected event titles and start/end times on a separate sensor | Optional Calendar permission and explicit sharing |
+| Meeting lamp / helper | Your selected output behavior | Status only, on/off or color light, switch, input boolean |
+| Offline handling | Source unavailable; configured safe target behavior | Freshness checked independently for calls and agenda |
+
+## New in 0.4.0 preview
+
+The [0.4.0 release candidate](https://github.com/kilinccagatay/mac-call-indicator/releases/tag/v0.4.0-rc.1)
+adds an opt-in macOS Calendar agenda without Microsoft Graph or Entra app registration.
+It reads one calendar already synced to the Mac, shows today's remaining meetings,
+and shows Monday on weekends. Calendar change notifications plus a one-minute
+fallback refresh the local cache; delivery still depends on the upstream Calendar
+account synchronizing its events.
+
+Scheduled meetings can optionally contribute to meeting status. Real calls,
+manual deadlines and scheduled meetings are independent: a call ending does not
+cancel a manually reserved hour. The ordinary call channel remains boolean-only;
+titles travel only through the separate, explicitly enabled agenda channel.
+
+**Upgrade both packages:** install the matching Home Assistant integration ZIP and
+restart HA before pairing the agenda. Keep the previous app/integration for rollback.
+The preview is experimental: it is not a universal call detector or a guaranteed
+meeting reminder. General macOS Now Playing/Plex control is **not included**.
+
+[Calendar setup](docs/calendar-agenda.md) · [Home Assistant guide](docs/home-assistant.md) ·
+[Release notes](CHANGELOG.md) · [Panel examples](https://github.com/kilinccagatay/home-assistant-legacy-panels)
+
+![Office agenda layout with synthetic event titles](docs/images/office-agenda-demo.jpg)
+
+This is a synthetic consumer example. A tablet is optional; use the meeting source
+for a lamp or any other Home Assistant automation instead.
 
 ## Choose your output
 
@@ -62,6 +101,8 @@ availability. Output configuration in webhook mode stays in Home Assistant.
 
 - **Connection:** Home Assistant address, Use default, generic device name,
   connection method, sign-in, private JSON import, and connection test.
+- **Calendar (optional):** read permission, calendar selection, separate agenda pairing,
+  explicit sharing, and independent scheduled-meeting indication.
 - **Output:** dashboard-only, light on/off, color light, switch, or input boolean.
   Target domain and color capability are checked before pairing. Configure colors,
   brightness, idle-off, and disconnected behavior when applicable.
@@ -109,8 +150,9 @@ Accessibility is revoked, automatic idle reporting stops; an explicit manual/tes
 meeting can still supply a positive state. The dashboard hides missing data.
 
 Only these output domains are supported: `light`, `switch`, `input_boolean`.
-The app does not request camera, microphone, screen recording, Contacts, Calendar,
-input monitoring, or Apple Events access. Accessibility scans Teams controls,
+The app does not request camera, microphone, screen recording, Contacts,
+input monitoring, or Apple Events access. Optional agenda sharing requests Calendar
+Full Access to read one selected calendar; events are never edited. Accessibility scans Teams controls,
 skips editable fields, and does not read window titles. Busy status or microphone
 activity alone does not trigger a meeting.
 
@@ -176,9 +218,9 @@ Ending that call leaves the original manual deadline unchanged. If a Teams call
 is still active when the manual timer expires, the dashboard indicator stays on
 until that call ends.
 
-Manual meetings do not require Accessibility. End times, remaining minutes, and
-calendar data are never sent to Home Assistant; its payload remains the same
-single boolean. An intentionally started manual timer is the explicit exception
+Manual meetings do not require Accessibility. Manual end times and remaining
+minutes are not sent to Home Assistant; the call payload remains a single boolean.
+Optional calendar titles and times use a separately configured agenda receiver. An intentionally started manual timer is the explicit exception
 to the connected-call requirement for automatic detection.
 
 ## Accessibility permission shortcut
@@ -211,8 +253,9 @@ HoaryDash panel. It has no green/idle indicator and controls no lamp.
 ![Meeting badge on an actual 800 × 480 tablet](docs/images/hoarydash-call-badge.png)
 
 Follow the [HoaryDash guide](docs/hoarydash.md) or the separate
-[older-hardware panel project](https://github.com/kilinccagatay/denver-tac-70051-home-assistant-base-station).
-That project covers the five-screen layout, tablet setup and enclosure. It is
+[older-hardware panel project](https://github.com/kilinccagatay/home-assistant-legacy-panels).
+That project covers separate Denver and Samsung office profiles, lightweight
+dashboards, printer views, forecasts and device-specific setup. It is
 one optional consumer of the meeting entity.
 
 ## Validation and limits
@@ -257,6 +300,8 @@ the source build is an alternative. No scripts disable Gatekeeper or remove quar
 The Apple Silicon build was exercised on the development Mac; the Intel slice is
 cross-compiled and has not been run on physical Intel hardware.
 
+For the calendar preview, check out tag `v0.4.0-rc.1` before building; `main`
+continues to carry the stable implementation while the calendar PR is reviewed.
 Run `sh scripts/package-release.sh` on a Mac to reproduce the packages. It builds
 both architectures, strips debug symbols, verifies the ad-hoc signature and macOS
 13 deployment targets, excludes user configuration, checks for private build
@@ -266,3 +311,13 @@ This remains an experimental project.
 To uninstall, run `sh scripts/uninstall.sh`, revoke Accessibility, and remove the
 Home Assistant integration/automations if no longer needed. Uninstalling does not
 delete your private configuration or credentials automatically.
+
+## Optional workday calendar
+
+Show upcoming meetings from one calendar already synced to macOS Calendar in a
+Home Assistant agenda. Weekends show Monday; Calendar change notifications plus
+a one-minute fallback keep the local list current. Optional scheduled indication
+combines with actual calls and manual timers without cancelling either source.
+Sharing titles is a separate opt-in channel; the ordinary call report remains
+boolean-only. See the [Calendar agenda guide](docs/calendar-agenda.md) for setup,
+permissions, privacy and offline limitations.
