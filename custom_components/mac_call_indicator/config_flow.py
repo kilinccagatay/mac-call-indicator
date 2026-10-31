@@ -49,7 +49,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=user_input["name"],
-                    data={**user_input, "client_id": client_id, "webhook_id": webhook.async_generate_id()})
+                    data={**user_input, "client_id": client_id, "webhook_id": webhook.async_generate_id(), "agenda_webhook_id": webhook.async_generate_id()})
         return self.async_show_form(step_id="user", errors=errors, data_schema=vol.Schema({
             vol.Required("name", default="Meeting indicator"): str,
             **output_schema(),

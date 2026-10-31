@@ -155,7 +155,9 @@ func updateCallState() {
     let authorized = AXIsProcessTrusted()
     let now = Date()
     let until = manualMeeting.deadline(now: now)
-    let value = ManualMeetingState.isMeeting(callDetected: detected, manualUntil: until, now: now) || meetingTest.active(now: now)
+    let agenda = CalendarAgenda.shared.report(now: now)
+    let scheduled = CalendarAgenda.shared.settings.includeInMeeting && agenda.scheduledMeeting
+    let value = AgendaPolicy.meeting(call: detected, manual: until != nil || meetingTest.active(now: now), scheduled: scheduled)
     DispatchQueue.main.async {
         let minutes = until.map { ManualMeetingState.remainingMinutes(until: $0, now: Date()) }
         let title = minutes.map { "● \($0)m" } ?? (value ? "●" : "○")
@@ -166,7 +168,7 @@ func updateCallState() {
             statusLine.title = "Manual meeting · \(minutes) min remaining" +
                 (authorized ? "" : " · Accessibility permission required — Open Settings…")
         } else {
-            statusLine.title = !authorized ? "Accessibility permission required — Open Settings…" : detected ? "Call active" : "No active call"
+            statusLine.title = scheduled ? "Scheduled meeting" : !authorized ? "Accessibility permission required — Open Settings…" : detected ? "Call active" : "No active call"
         }
         AccessibilityPermission.shared.configure(statusLine, authorized: authorized)
         connectionMenu.refreshPermissionNotice()
@@ -189,12 +191,15 @@ func updateCallState() {
         } catch { /* Diagnostics must not interrupt detection or leak paths. */ }
         // Without AX permission, silence is unknown rather than a verified idle
         // report. An explicit manual/test meeting is still valid evidence.
-        if authorized || until != nil || meetingTest.active(now: now),
+        if authorized || until != nil || scheduled || meetingTest.active(now: now),
            let endpoint = ConnectionStore.shared.endpoint() { send(value, to: endpoint) }
         // Boolean-only local logging. No labels, URLs, tokens, or call metadata.
         if value != lastValue {
             print("in_call=\(value) observer_authorized=\(AXIsProcessTrusted())")
             fflush(stdout)
+        }
+        if CalendarAgenda.shared.settings.enabled, let agendaURL = CalendarAgenda.shared.settings.receiver() {
+            CalendarAgenda.shared.send(agenda, to: agendaURL)
         }
         lastSend = now
         lastValue = value

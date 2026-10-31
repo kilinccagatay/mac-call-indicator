@@ -4,8 +4,10 @@ Turn your Mac's meeting status into a Home Assistant entity. Use it for a door-s
 meeting lamp, an RGB desk light, a switch, an input boolean, or a dashboard badge.
 No tablet is required.
 
-The Mac sends only `{"in_call":true}` or `{"in_call":false}`. Meeting titles,
-participants, phone numbers, messages, and calendar contents never leave the Mac.
+The default call channel sends only `{"in_call":true}` or `{"in_call":false}`.
+Participants, phone numbers and messages never leave the Mac. Optional Calendar
+sharing sends selected meeting titles and times through a separate agenda channel;
+it is disabled until you explicitly enable it.
 Automatic detection currently targets Teams desktop; manual meeting timers work
 independently of calls.
 
@@ -109,8 +111,9 @@ Accessibility is revoked, automatic idle reporting stops; an explicit manual/tes
 meeting can still supply a positive state. The dashboard hides missing data.
 
 Only these output domains are supported: `light`, `switch`, `input_boolean`.
-The app does not request camera, microphone, screen recording, Contacts, Calendar,
-input monitoring, or Apple Events access. Accessibility scans Teams controls,
+The app does not request camera, microphone, screen recording, Contacts,
+input monitoring, or Apple Events access. Optional agenda sharing requests Calendar
+Full Access to read one selected calendar; events are never edited. Accessibility scans Teams controls,
 skips editable fields, and does not read window titles. Busy status or microphone
 activity alone does not trigger a meeting.
 
@@ -176,9 +179,9 @@ Ending that call leaves the original manual deadline unchanged. If a Teams call
 is still active when the manual timer expires, the dashboard indicator stays on
 until that call ends.
 
-Manual meetings do not require Accessibility. End times, remaining minutes, and
-calendar data are never sent to Home Assistant; its payload remains the same
-single boolean. An intentionally started manual timer is the explicit exception
+Manual meetings do not require Accessibility. Manual end times and remaining
+minutes are not sent to Home Assistant; the call payload remains a single boolean.
+Optional calendar titles and times use a separately configured agenda receiver. An intentionally started manual timer is the explicit exception
 to the connected-call requirement for automatic detection.
 
 ## Accessibility permission shortcut
@@ -266,3 +269,13 @@ This remains an experimental project.
 To uninstall, run `sh scripts/uninstall.sh`, revoke Accessibility, and remove the
 Home Assistant integration/automations if no longer needed. Uninstalling does not
 delete your private configuration or credentials automatically.
+
+## Optional workday calendar
+
+Show upcoming meetings from one calendar already synced to macOS Calendar in a
+Home Assistant agenda. Weekends show Monday; Calendar change notifications plus
+a one-minute fallback keep the local list current. Optional scheduled indication
+combines with actual calls and manual timers without cancelling either source.
+Sharing titles is a separate opt-in channel; the ordinary call report remains
+boolean-only. See the [Calendar agenda guide](docs/calendar-agenda.md) for setup,
+permissions, privacy and offline limitations.
