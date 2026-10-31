@@ -11,7 +11,10 @@ policy and the calendar provider still determine whether local access is allowed
    Keep a backup of the previous integration and installed Mac app.
 2. Open **Settings → Calendar → Allow Calendar access…** in the Mac app. Apple
    requires Full Calendar Access to read events; the app never writes events.
-3. Choose one work calendar. The selection stays local to the Mac.
+3. Choose the calendar that actually contains your work events. Its display name
+   may be **Calendar** under an Exchange account; a calendar named **Work** can
+   instead be an empty personal calendar. Verify an expected workday against the
+   native Calendar app. The selected calendar identifier stays local to the Mac.
 4. Use **Connect agenda to Home Assistant…**. Existing Home Assistant sign-in is
    reused, or the app opens the normal sign-in flow. Pairing requires a Home
    Assistant administrator. A separate status-only receiver is created; the
