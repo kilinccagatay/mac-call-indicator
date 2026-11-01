@@ -6,9 +6,9 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 
-def validate_report(body, now):
+def validate_report(body, now, *, single_day=False):
     keys = {"available", "generated_at", "valid_until", "day_start", "day_end", "events"}
-    if not isinstance(body, dict) or set(body) != keys or type(body["available"]) is not bool:
+    if not isinstance(body, dict) or set(body) not in (keys, keys | {"days"}) or type(body["available"]) is not bool:
         raise ValueError("invalid_report")
     for key in keys - {"available", "events"}:
         if type(body[key]) not in (int, float) or not math.isfinite(body[key]):
@@ -17,7 +17,7 @@ def validate_report(body, now):
     if not now - 90 <= generated <= now + 5 or not generated < until <= generated + 90:
         raise ValueError("expired_or_invalid_lease")
     first, last = body["day_start"], body["day_end"]
-    if not now - 90000 <= first <= now + 3 * 86400 or not 23 * 3600 <= last - first <= 25 * 3600:
+    if not now - 90000 <= first <= now + (7 if single_day else 3) * 86400 or not 23 * 3600 <= last - first <= 25 * 3600:
         raise ValueError("invalid_day")
     events = body["events"]
     if not isinstance(events, list) or len(events) > 64 or (not body["available"] and events):
@@ -31,6 +31,21 @@ def validate_report(body, now):
             raise ValueError("invalid_event_time")
         if not event["start"] < event["end"] or not (event["start"] < last and event["end"] > first):
             raise ValueError("outside_selected_day")
+    if "days" in body:
+        days = body["days"]
+        if single_day or not isinstance(days, list) or len(days) != 3:
+            raise ValueError("invalid_days")
+        previous = None
+        for day in days:
+            if not isinstance(day, dict) or set(day) != {"day_start", "day_end", "events"} or not isinstance(day.get("events"), list) or len(day["events"]) > 16:
+                raise ValueError("invalid_day_report")
+            # Reuse event/type/lease bounds; later workdays can follow a weekend.
+            validate_report({**{k: body[k] for k in keys}, **day}, now, single_day=True)
+            if previous is not None and not 23 * 3600 <= day["day_start"] - previous <= 73 * 3600:
+                raise ValueError("unordered_days")
+            previous = day["day_start"]
+        if any(days[0][k] != body[k] for k in ("day_start", "day_end", "events")):
+            raise ValueError("inconsistent_first_day")
     return body
 
 

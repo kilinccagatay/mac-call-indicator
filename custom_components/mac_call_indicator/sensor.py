@@ -12,7 +12,7 @@ class AgendaSensor(SensorEntity):
     _attr_has_entity_name = True
     _attr_name = "Agenda"
     _attr_icon = "mdi:calendar-clock"
-    _unrecorded_attributes = frozenset({"events"})
+    _unrecorded_attributes = frozenset({"events", "days"})
 
     def __init__(self, runtime):
         self.runtime = runtime
@@ -30,7 +30,8 @@ class AgendaSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         report = self.runtime.agenda.report if self.runtime.agenda.fresh else None
-        return {"events": report["events"] if report else [],
+        return {"days": report.get("days", []) if report else [],
+                "events": report["events"] if report else [],
                 "day_start": report["day_start"] if report else 0,
                 "valid_until": report["valid_until"] if report else 0}
 

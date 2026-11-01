@@ -27,11 +27,17 @@ policy and the calendar provider still determine whether local access is allowed
 
 ## What is displayed
 
-On weekdays the agenda contains today's remaining timed events, including a
-meeting already in progress. Saturday and Sunday show Monday's agenda instead.
+The agenda carries three workdays: today's remaining timed events on weekdays,
+followed by the next two workdays. Saturday and Sunday begin with Monday.
+The office panel offers equal-width day tabs with an explicit selected state;
+selecting another day shows only that day's events. The first day is restored
+after a real display-dark notification, page hiding, or a new base workday.
 All-day, cancelled, declined and explicitly free events are excluded. Public
 holidays are not inferred. The compact office view shows two upcoming entries,
-or three when its height permits; an extra-count label indicates more entries.
+or three when its height permits; an accessible summary indicates more entries.
+Each day is bounded to 16 title/time-only events. Local calendar change
+notifications and the existing one-minute fallback refresh the whole window.
+Future selected days never trigger the current meeting indicator.
 Finished events leave the list automatically. A fresh empty calendar is different
 from an unavailable calendar.
 
@@ -87,3 +93,24 @@ not establish end-to-end reliability.
 ![Example office agenda with synthetic meeting names](images/office-agenda-demo.jpg)
 
 Synthetic example only: no real work calendar or printer job is shown.
+
+## Three-day protocol compatibility
+
+The original `day_start`, `day_end` and `events` continue to describe the first
+workday. An optional `days` array contains exactly three ordered workday reports,
+including that first day. The updated receiver accepts older single-day clients;
+update the integration and restart HA before installing the new Mac build.
+Both `events` and `days` are excluded from recorder history. No attendees,
+locations, notes, identifiers or account details are added. The ordinary call
+channel and Denver's title-free indicator remain unchanged.
+
+Development build 8 adds this window. Installation preserved the existing
+Accessibility approval on the tested Mac; ad-hoc builds can still require renewed
+macOS approval on other installations.
+
+![Three workday tabs with a selected Tuesday](images/three-workday-agenda.png)
+
+Synthetic panel example with generic titles. On the tested installation, the
+user renewed Calendar approval after the update and confirmed the calendar
+returned. Accessibility approval remained valid. Native dark/reset behavior
+was observed separately; this does not establish a complete device regression.

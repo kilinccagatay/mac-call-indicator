@@ -25,7 +25,7 @@ independently of calls.
 
 The [0.4.0 release candidate](https://github.com/kilinccagatay/mac-call-indicator/releases/tag/v0.4.0-rc.1)
 adds an opt-in macOS Calendar agenda without Microsoft Graph or Entra app registration.
-It reads one calendar already synced to the Mac, shows today's remaining meetings,
+It reads one calendar already synced to the Mac, shares three selectable workdays,
 and shows Monday on weekends. Calendar change notifications plus a one-minute
 fallback refresh the local cache; delivery still depends on the upstream Calendar
 account synchronizing its events.
@@ -317,7 +317,7 @@ delete your private configuration or credentials automatically.
 ## Optional workday calendar
 
 Show upcoming meetings from one calendar already synced to macOS Calendar in a
-Home Assistant agenda. Weekends show Monday; Calendar change notifications plus
+Home Assistant agenda with three selectable workdays. Weekends begin with Monday; Calendar change notifications plus
 a one-minute fallback keep the local list current. Optional scheduled indication
 combines with actual calls and manual timers without cancelling either source.
 Sharing titles is a separate opt-in channel; the ordinary call report remains

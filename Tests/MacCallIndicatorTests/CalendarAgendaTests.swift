@@ -12,7 +12,7 @@ final class CalendarAgendaTests: XCTestCase {
         XCTAssertTrue(report.scheduledMeeting)
         XCTAssertEqual(report.valid_until, now.timeIntervalSince1970 + 90)
         let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(report)) as! [String: Any]
-        XCTAssertEqual(Set(json.keys), Set(["available", "generated_at", "valid_until", "day_start", "day_end", "events"]))
+        XCTAssertEqual(Set(json.keys), Set(["available", "generated_at", "valid_until", "day_start", "day_end", "events", "days"]))
         let event = (json["events"] as! [[String: Any]])[0]
         XCTAssertEqual(Set(event.keys), Set(["title", "start", "end"]))
         XCTAssertTrue(AgendaPolicy.report(items: items, available: false, now: now).events.isEmpty)
@@ -24,6 +24,18 @@ final class CalendarAgendaTests: XCTestCase {
         XCTAssertEqual(cal.component(.weekday, from: monday), 2)
         let report = AgendaPolicy.report(items: [AgendaItem(title: "Monday example", start: monday.timeIntervalSince1970 + 36000, end: monday.timeIntervalSince1970 + 39600)], available: true, now: saturday, calendar: cal)
         XCTAssertEqual(report.events.count, 1); XCTAssertFalse(report.scheduledMeeting)
+    }
+    func testThreeWorkdaysStayIndependentAndSkipWeekend() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Europe/Stockholm")!
+        let friday = cal.date(from: DateComponents(year: 2026, month: 10, day: 30, hour: 12))!
+        let days = AgendaPolicy.workdays(now: friday, calendar: cal)
+        XCTAssertEqual(days.map { cal.component(.weekday, from: $0) }, [6, 2, 3])
+        let mondayItem = AgendaItem(title: "Future example", start: days[1].timeIntervalSince1970 + 36000, end: days[1].timeIntervalSince1970 + 39600)
+        let report = AgendaPolicy.report(items: [mondayItem], available: true, now: friday, calendar: cal)
+        XCTAssertTrue(report.events.isEmpty)
+        XCTAssertEqual(report.days[1].events, [mondayItem])
+        XCTAssertFalse(report.scheduledMeeting)
+        XCTAssertEqual(report.days.count, 3)
     }
     func testHalfOpenIntervalsAndIndependentSources() {
         let item = AgendaItem(title: "Synthetic", start: 100, end: 200)

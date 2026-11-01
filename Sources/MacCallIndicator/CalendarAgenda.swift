@@ -8,6 +8,11 @@ struct AgendaItem: Codable, Equatable {
     let end: TimeInterval
     func active(at now: Date) -> Bool { start <= now.timeIntervalSince1970 && now.timeIntervalSince1970 < end }
 }
+struct AgendaDay: Codable {
+    let day_start: TimeInterval
+    let day_end: TimeInterval
+    let events: [AgendaItem]
+}
 struct AgendaReport: Codable {
     let available: Bool
     let generated_at: TimeInterval
@@ -15,7 +20,8 @@ struct AgendaReport: Codable {
     let day_start: TimeInterval
     let day_end: TimeInterval
     let events: [AgendaItem]
-    var scheduledMeeting: Bool { available && events.contains { $0.active(at: Date(timeIntervalSince1970: generated_at)) } }
+    let days: [AgendaDay]
+    var scheduledMeeting: Bool { available && generated_at >= day_start && generated_at < day_end && events.contains { $0.active(at: Date(timeIntervalSince1970: generated_at)) } }
 }
 enum AgendaPolicy {
     static func workday(now: Date, calendar: Calendar = .current) -> Date {
@@ -24,16 +30,28 @@ enum AgendaPolicy {
         return day
     }
     static func report(items: [AgendaItem], available: Bool, now: Date, calendar: Calendar = .current) -> AgendaReport {
-        let start = workday(now: now, calendar: calendar)
-        let end = calendar.date(byAdding: .day, value: 1, to: start)!
-        let events = available ? items.filter {
-            $0.start.isFinite && $0.end.isFinite && $0.start < $0.end &&
-            $0.start < end.timeIntervalSince1970 && $0.end > max(start.timeIntervalSince1970, now.timeIntervalSince1970)
-        }.sorted { $0.start < $1.start }.prefix(64).map {
-            AgendaItem(title: String($0.title.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ").prefix(160)), start: $0.start, end: $0.end)
-        } : []
+        let dates = workdays(now: now, calendar: calendar)
+        let days = dates.map { start -> AgendaDay in
+            let end = calendar.date(byAdding: .day, value: 1, to: start)!
+            let events = available ? items.filter {
+                $0.start.isFinite && $0.end.isFinite && $0.start < $0.end &&
+                $0.start < end.timeIntervalSince1970 && $0.end > max(start.timeIntervalSince1970, now.timeIntervalSince1970)
+            }.sorted { $0.start < $1.start }.prefix(16).map {
+                AgendaItem(title: String($0.title.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ").prefix(160)), start: $0.start, end: $0.end)
+            } : []
+            return AgendaDay(day_start: start.timeIntervalSince1970, day_end: end.timeIntervalSince1970, events: Array(events))
+        }
         return AgendaReport(available: available, generated_at: now.timeIntervalSince1970,
-                            valid_until: now.addingTimeInterval(90).timeIntervalSince1970, day_start: start.timeIntervalSince1970, day_end: end.timeIntervalSince1970, events: Array(events))
+                            valid_until: now.addingTimeInterval(90).timeIntervalSince1970,
+                            day_start: days[0].day_start, day_end: days[0].day_end, events: days[0].events, days: days)
+    }
+    static func workdays(now: Date, calendar: Calendar = .current) -> [Date] {
+        var dates = [workday(now: now, calendar: calendar)]
+        while dates.count < 3 {
+            let next = calendar.date(byAdding: .day, value: 1, to: dates.last!)!
+            dates.append(workday(now: next, calendar: calendar))
+        }
+        return dates
     }
     static func meeting(call: Bool, manual: Bool, scheduled: Bool) -> Bool { call || manual || scheduled }
 }
@@ -91,7 +109,7 @@ final class CalendarAgenda {
         // fallback also covers missed notifications, sleep and clock changes.
         if changed || cachedDay != AgendaPolicy.workday(now: now) || now.timeIntervalSince(refreshed) >= 60 || now < refreshed || selectedID != settings.calendarID {
             let day = AgendaPolicy.workday(now: now)
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: AgendaPolicy.workdays(now: now).last!)!
             let predicate = store.predicateForEvents(withStart: day, end: tomorrow, calendars: [calendar])
             cached = store.events(matching: predicate).filter { event in
                 !event.isAllDay && event.status != .canceled && event.availability != .free &&

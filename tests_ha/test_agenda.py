@@ -46,3 +46,22 @@ async def test_separate_receiver_expiry_and_invalid_reports_cannot_extend_lease(
     assert not runtime.fresh and runtime.report is None
     await runtime.close()
     assert (await runtime.receive(None, "", Request(report(now)))).status == 503
+
+
+def test_three_days_are_bounded_independent_and_legacy_compatible():
+    now = 1800000000
+    body = report(now)
+    body["days"] = [{k: body[k] for k in ("day_start", "day_end", "events")}]
+    for offset in (1, 2):
+        body["days"].append({"day_start": body["day_start"] + offset * 86400,
+                             "day_end": body["day_end"] + offset * 86400, "events": []})
+    assert validate_report(body, now)["days"][1]["events"] == []
+    assert validate_report(report(now), now)
+    import copy
+    for mutate in (lambda b: b["days"].reverse(),
+                   lambda b: b["days"][1].update(events=None),
+                   lambda b: b["days"][0].update(events=[]),
+                   lambda b: b["days"][1].update(events=[{"title":"x", "start": now, "end":now+1}]),
+                   lambda b: b["days"][1].update(notes="excluded")):
+        changed = copy.deepcopy(body); mutate(changed)
+        with pytest.raises(ValueError): validate_report(changed, now)

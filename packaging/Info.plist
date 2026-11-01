@@ -5,13 +5,13 @@
   <key>CFBundleExecutable</key><string>MacCallIndicator</string>
   <key>CFBundleName</key><string>Mac Call Indicator</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>7</string>
+  <key>CFBundleVersion</key><string>8</string>
   <key>CFBundleShortVersionString</key><string>0.4.0</string>
   <key>CFBundleURLTypes</key><array><dict>
     <key>CFBundleURLName</key><string>Home Assistant authentication</string>
     <key>CFBundleURLSchemes</key><array><string>mac-call-indicator</string></array>
   </dict></array>
-  <key>NSCalendarsFullAccessUsageDescription</key><string>Read your selected work calendar to share today’s meeting titles and times with your own Home Assistant. Events are never edited.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Read your selected work calendar to share the next three workdays’ meeting titles and times with your own Home Assistant. Events are never edited.</string>
   <key>NSCalendarsUsageDescription</key><string>Read your selected work calendar for your Home Assistant agenda. Events are never edited.</string>
   <key>LSUIElement</key><true/>
 </dict></plist>
