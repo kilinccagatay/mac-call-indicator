@@ -1,5 +1,13 @@
 # Release notes
 
+## 0.4.1 — computer activity (unreleased)
+
+- Separate boolean computer availability for lock, display sleep, system sleep and session changes.
+- Independent Home Assistant computer sensor and expiry; existing meeting/lamp and calendar channels preserved.
+- No additional macOS privacy permission; source-build permission renewal documented.
+- Companion Samsung helper can consume explicit inactive state with legacy heartbeat fallback.
+
+
 ## 0.4.0-rc.1 — Optional local workday agenda (2026-11-01)
 
 Universal macOS app version 0.4.0, build 7; Home Assistant integration version 0.4.0.

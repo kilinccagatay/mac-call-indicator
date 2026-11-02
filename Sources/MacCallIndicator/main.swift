@@ -64,11 +64,11 @@ func webhookURL() -> URL? {
     return url
 }
 
-func send(_ value: Bool, to url: URL) {
+func send(_ value: Bool, to url: URL, key: String = "in_call") {
     var request = URLRequest(url: url, timeoutInterval: 4)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.httpBody = Data((value ? "{\"in_call\":true}" : "{\"in_call\":false}").utf8)
+    request.httpBody = try? JSONSerialization.data(withJSONObject: [key: value])
     let session = URLSession(configuration: .ephemeral, delegate: NoRedirect(), delegateQueue: nil)
     let done = DispatchSemaphore(value: 0)
     session.dataTask(with: request) { _, _, _ in done.signal() }.resume()
@@ -148,9 +148,22 @@ var lastValue: Bool? = nil
 var lastSend = Date.distantPast
 let meetingTest = TransientMeetingTest()
 let pollQueue = DispatchQueue(label: "local.MacCallIndicator.poll")
+let computerActivity = ComputerActivity()
+var lastComputerValue: Bool?
+var lastComputerSend = Date.distantPast
+func updateComputerState() {
+    let active = computerActivity.active
+    let now = Date()
+    guard active != lastComputerValue || now.timeIntervalSince(lastComputerSend) >= 10 else { return }
+    if let endpoint = ConnectionStore.shared.endpoint() { send(active, to: endpoint, key: "computer_active") }
+    lastComputerValue = active
+    lastComputerSend = now
+}
+computerActivity.onChange = { pollQueue.async { updateComputerState() } }
 let pollTimer = DispatchSource.makeTimerSource(queue: pollQueue)
 pollTimer.schedule(deadline: .now(), repeating: 2)
 func updateCallState() {
+    updateComputerState()
     let detected = autoreleasepool { connectedCall() }
     let authorized = AXIsProcessTrusted()
     let now = Date()
@@ -184,7 +197,8 @@ func updateCallState() {
                                                     attributes: [.posixPermissions: 0o700])
             let statusURL = support.appendingPathComponent("status.json")
             let data = try JSONSerialization.data(withJSONObject: [
-                "in_call": value, "observer_authorized": authorized
+                "in_call": value, "observer_authorized": authorized, "computer_active": computerActivity.active,
+                "calendar_authorized": CalendarAgenda.authorized
             ])
             try data.write(to: statusURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: statusURL.path)
@@ -207,7 +221,7 @@ func updateCallState() {
 }
 manualMenu.onChange = { pollQueue.async { updateCallState() } }
 MainActor.assumeIsolated {
-    connectionMenu.onChange = { pollQueue.async { lastSend = .distantPast; updateCallState() } }
+    connectionMenu.onChange = { pollQueue.async { lastSend = .distantPast; lastComputerSend = .distantPast; updateCallState() } }
     connectionMenu.onTest = {
         meetingTest.start()
         pollQueue.async { lastSend = .distantPast; updateCallState() }

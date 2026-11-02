@@ -4,7 +4,9 @@ Turn your Mac's meeting status into a Home Assistant entity. Use it for a door-s
 meeting lamp, an RGB desk light, a switch, an input boolean, or a dashboard badge.
 No tablet is required.
 
-The default call channel sends only `{"in_call":true}` or `{"in_call":false}`.
+The call channel sends only `{"in_call":true}` or `{"in_call":false}`.
+A separate boolean-only computer channel reports lock/display availability; it
+never changes meeting status. [Computer activity setup](docs/computer-activity.md).
 Participants, phone numbers and messages never leave the Mac. Optional Calendar
 sharing sends selected meeting titles and times through a separate agenda channel;
 it is disabled until you explicitly enable it.
@@ -19,6 +21,7 @@ independently of calls.
 | Manual meeting timer | Same meeting source; independent deadline | 30 minutes, one hour, or a visual end-time picker |
 | Optional workday agenda | Selected event titles and start/end times on a separate sensor | Optional Calendar permission and explicit sharing |
 | Meeting lamp / helper | Your selected output behavior | Status only, on/off or color light, switch, input boolean |
+| Computer activity | Active/inactive, independent heartbeat; no meeting changes | No extra macOS permission; optional panel automation |
 | Offline handling | Source unavailable; configured safe target behavior | Freshness checked independently for calls and agenda |
 
 ## New in 0.4.0 preview

@@ -253,3 +253,43 @@ async def test_agenda_entity_is_separate_from_call_state(hass):
     assert hass.states.get(agenda_id).state == "unavailable"
     assert hass.states.get(agenda_id).attributes.get("events", []) == []
     assert runtime.in_call is True, "Agenda expiry cannot cancel a real call"
+
+
+@pytest.mark.asyncio
+async def test_computer_report_has_independent_lease_and_never_controls_meeting_output(hass):
+    entry, runtime = await create_entry(hass)
+    await runtime.receive(hass, "", Report({"in_call": True}))
+    meeting_report = runtime.last_report
+    assert (await runtime.receive(hass, "", Report({"computer_active": False}))).status == 200
+    await hass.async_block_till_done()
+    entity = hass.states.get("binary_sensor.mac_computer_" + entry.entry_id.lower())
+    assert entity.state == "off"
+    assert runtime.last_report == meeting_report and runtime.in_call is True
+    runtime.last_seen -= 41
+    await runtime.expire(dt_util.utcnow())
+    assert runtime.in_call is None and runtime.computer_active is False
+    await runtime.receive(hass, "", Report({"computer_active": True}))
+    await runtime.expire_computer(dt_util.utcnow())
+    assert runtime.computer_active is True  # queued old expiry is ignored
+    runtime.computer_seen -= 41
+    await runtime.expire_computer(dt_util.utcnow())
+    assert runtime.computer_active is None
+    for payload in [{"computer_active": 1}, {"computer_active": "false"},
+                    {"computer_active": True, "in_call": False}]:
+        assert (await runtime.receive(hass, "", Report(payload))).status == 400
+
+
+@pytest.mark.asyncio
+async def test_computer_lock_does_not_change_meeting_lamp_or_manual_meeting(hass):
+    hass.states.async_set("light.meeting", "off", {"supported_color_modes": ["rgb"]})
+    commands = []
+    async def record(call):
+        commands.append((call.service, dict(call.data)))
+    hass.services.async_register("light", "turn_on", record)
+    hass.services.async_register("light", "turn_off", record)
+    entry, runtime = await create_entry(hass, output_mode="light_color", target_entity="light.meeting")
+    await runtime.receive(hass, "", Report({"in_call": True}))
+    commands.clear()
+    await runtime.receive(hass, "", Report({"computer_active": False}))
+    await runtime.receive(hass, "", Report({"computer_active": True}))
+    assert runtime.in_call is True and commands == []
