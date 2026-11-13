@@ -4,7 +4,9 @@ Turn your Mac's meeting status into a Home Assistant entity. Use it for a door-s
 meeting lamp, an RGB desk light, a switch, an input boolean, or a dashboard badge.
 No tablet is required.
 
-The default call channel sends only `{"in_call":true}` or `{"in_call":false}`.
+The call channel sends only `{"in_call":true}` or `{"in_call":false}`.
+A separate boolean-only computer channel reports lock/display availability; it
+never changes meeting status. [Computer activity setup](docs/computer-activity.md).
 Participants, phone numbers and messages never leave the Mac. Optional Calendar
 sharing sends selected meeting titles and times through a separate agenda channel;
 it is disabled until you explicitly enable it.
@@ -19,6 +21,7 @@ independently of calls.
 | Manual meeting timer | Same meeting source; independent deadline | 30 minutes, one hour, or a visual end-time picker |
 | Optional workday agenda | Selected event titles and start/end times on a separate sensor | Optional Calendar permission and explicit sharing |
 | Meeting lamp / helper | Your selected output behavior | Status only, on/off or color light, switch, input boolean |
+| Computer activity | Active/inactive, independent heartbeat; no meeting changes | No extra macOS permission; optional panel automation |
 | Offline handling | Source unavailable; configured safe target behavior | Freshness checked independently for calls and agenda |
 
 ## New in 0.4.0 preview
@@ -26,7 +29,8 @@ independently of calls.
 The [0.4.0 release candidate](https://github.com/kilinccagatay/mac-call-indicator/releases/tag/v0.4.0-rc.1)
 adds an opt-in macOS Calendar agenda without Microsoft Graph or Entra app registration.
 It reads one calendar already synced to the Mac, shows today's remaining meetings,
-and shows Monday on weekends. Calendar change notifications plus a one-minute
+and shows Monday on weekends. The current source extends the agenda to three
+selectable workdays. Calendar change notifications plus a one-minute
 fallback refresh the local cache; delivery still depends on the upstream Calendar
 account synchronizing its events.
 
@@ -320,7 +324,7 @@ delete your private configuration or credentials automatically.
 ## Optional workday calendar
 
 Show upcoming meetings from one calendar already synced to macOS Calendar in a
-Home Assistant agenda. Weekends show Monday; Calendar change notifications plus
+Home Assistant agenda with three selectable workdays. Weekends begin with Monday; Calendar change notifications plus
 a one-minute fallback keep the local list current. Optional scheduled indication
 combines with actual calls and manual timers without cancelling either source.
 Sharing titles is a separate opt-in channel; the ordinary call report remains

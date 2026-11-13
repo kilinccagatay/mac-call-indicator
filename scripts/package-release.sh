@@ -49,7 +49,7 @@ with zipfile.ZipFile(out / f"MacCallIndicator-HomeAssistant-v{version}.zip", "w"
 with zipfile.ZipFile(out / f"MacCallIndicator-Screenshots-v{version}.zip", "w", zipfile.ZIP_DEFLATED) as archive:
     for name in ["settings-connection.png", "settings-status-only.png", "settings-color-light.png",
                  "meeting-until-hour.png", "meeting-until-minute.png", "hoarydash-call-badge.png",
-                 "accessibility-help.png"]:
+                 "accessibility-help.png", "office-agenda-demo.jpg"]:
         file = Path("docs/images") / name
         archive.write(file, name)
 lines = [f"{hashlib.sha256(file.read_bytes()).hexdigest()}  {file.name}\n"

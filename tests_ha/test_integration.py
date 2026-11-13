@@ -228,3 +228,68 @@ async def test_legacy_template_rejects_invalid_idle_and_expires(hass):
     assert Template(entity["availability"], hass).async_render(variables) is True
     variables["trigger"] = {"id": "startup"}
     assert Template(entity["availability"], hass).async_render(variables) is False
+
+
+@pytest.mark.asyncio
+async def test_agenda_entity_is_separate_from_call_state(hass):
+    import json
+    entry, runtime = await create_entry(hass)
+    now = dt_util.utcnow().timestamp()
+    body = {"available": True, "generated_at": now, "valid_until": now + 90,
+            "day_start": now - 1000, "day_end": now - 1000 + 86400,
+            "events": [{"title": "Synthetic example", "start": now, "end": now + 100}]}
+    content = asyncio.StreamReader()
+    content.feed_data(json.dumps(body).encode()); content.feed_eof()
+    assert (await runtime.agenda.receive(hass, "", SimpleNamespace(content=content))).status == 200
+    await hass.async_block_till_done()
+    agenda_id = "sensor.mac_call_agenda_" + entry.entry_id.lower()
+    agenda = hass.states.get(agenda_id)
+    assert agenda.state == "ready" and len(agenda.attributes["events"]) == 1
+    assert runtime.in_call is None, "Agenda must not write the actual call report or actuate outputs"
+    await runtime.receive(hass, "", Report({"in_call": True}))
+    runtime.agenda.report["valid_until"] = now - 1
+    await runtime.agenda.expire(None)
+    await hass.async_block_till_done()
+    assert hass.states.get(agenda_id).state == "unavailable"
+    assert hass.states.get(agenda_id).attributes.get("events", []) == []
+    assert runtime.in_call is True, "Agenda expiry cannot cancel a real call"
+
+
+@pytest.mark.asyncio
+async def test_computer_report_has_independent_lease_and_never_controls_meeting_output(hass):
+    entry, runtime = await create_entry(hass)
+    await runtime.receive(hass, "", Report({"in_call": True}))
+    meeting_report = runtime.last_report
+    assert (await runtime.receive(hass, "", Report({"computer_active": False}))).status == 200
+    await hass.async_block_till_done()
+    entity = hass.states.get("binary_sensor.mac_computer_" + entry.entry_id.lower())
+    assert entity.state == "off"
+    assert runtime.last_report == meeting_report and runtime.in_call is True
+    runtime.last_seen -= 41
+    await runtime.expire(dt_util.utcnow())
+    assert runtime.in_call is None and runtime.computer_active is False
+    await runtime.receive(hass, "", Report({"computer_active": True}))
+    await runtime.expire_computer(dt_util.utcnow())
+    assert runtime.computer_active is True  # queued old expiry is ignored
+    runtime.computer_seen -= 41
+    await runtime.expire_computer(dt_util.utcnow())
+    assert runtime.computer_active is None
+    for payload in [{"computer_active": 1}, {"computer_active": "false"},
+                    {"computer_active": True, "in_call": False}]:
+        assert (await runtime.receive(hass, "", Report(payload))).status == 400
+
+
+@pytest.mark.asyncio
+async def test_computer_lock_does_not_change_meeting_lamp_or_manual_meeting(hass):
+    hass.states.async_set("light.meeting", "off", {"supported_color_modes": ["rgb"]})
+    commands = []
+    async def record(call):
+        commands.append((call.service, dict(call.data)))
+    hass.services.async_register("light", "turn_on", record)
+    hass.services.async_register("light", "turn_off", record)
+    entry, runtime = await create_entry(hass, output_mode="light_color", target_entity="light.meeting")
+    await runtime.receive(hass, "", Report({"in_call": True}))
+    commands.clear()
+    await runtime.receive(hass, "", Report({"computer_active": False}))
+    await runtime.receive(hass, "", Report({"computer_active": True}))
+    assert runtime.in_call is True and commands == []

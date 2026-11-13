@@ -1,3 +1,4 @@
+import ComputerPresence
 import AppKit
 import ApplicationServices
 import Foundation
@@ -64,11 +65,11 @@ func webhookURL() -> URL? {
     return url
 }
 
-func send(_ value: Bool, to url: URL) {
+func send(_ value: Bool, to url: URL, key: String = "in_call") {
     var request = URLRequest(url: url, timeoutInterval: 4)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.httpBody = Data((value ? "{\"in_call\":true}" : "{\"in_call\":false}").utf8)
+    request.httpBody = try? JSONSerialization.data(withJSONObject: [key: value])
     let session = URLSession(configuration: .ephemeral, delegate: NoRedirect(), delegateQueue: nil)
     let done = DispatchSemaphore(value: 0)
     session.dataTask(with: request) { _, _, _ in done.signal() }.resume()
@@ -148,14 +149,29 @@ var lastValue: Bool? = nil
 var lastSend = Date.distantPast
 let meetingTest = TransientMeetingTest()
 let pollQueue = DispatchQueue(label: "local.MacCallIndicator.poll")
+let computerActivity = ComputerActivity()
+var lastComputerValue: Bool?
+var lastComputerSend = Date.distantPast
+func updateComputerState() {
+    let active = computerActivity.active
+    let now = Date()
+    guard active != lastComputerValue || now.timeIntervalSince(lastComputerSend) >= 10 else { return }
+    if let endpoint = ConnectionStore.shared.endpoint() { send(active, to: endpoint, key: "computer_active") }
+    lastComputerValue = active
+    lastComputerSend = now
+}
+computerActivity.onChange = { pollQueue.async { updateComputerState() } }
 let pollTimer = DispatchSource.makeTimerSource(queue: pollQueue)
 pollTimer.schedule(deadline: .now(), repeating: 2)
 func updateCallState() {
+    updateComputerState()
     let detected = autoreleasepool { connectedCall() }
     let authorized = AXIsProcessTrusted()
     let now = Date()
     let until = manualMeeting.deadline(now: now)
-    let value = ManualMeetingState.isMeeting(callDetected: detected, manualUntil: until, now: now) || meetingTest.active(now: now)
+    let agenda = CalendarAgenda.shared.report(now: now)
+    let scheduled = CalendarAgenda.shared.settings.includeInMeeting && agenda.scheduledMeeting
+    let value = AgendaPolicy.meeting(call: detected, manual: until != nil || meetingTest.active(now: now), scheduled: scheduled)
     DispatchQueue.main.async {
         let minutes = until.map { ManualMeetingState.remainingMinutes(until: $0, now: Date()) }
         let title = minutes.map { "● \($0)m" } ?? (value ? "●" : "○")
@@ -166,7 +182,7 @@ func updateCallState() {
             statusLine.title = "Manual meeting · \(minutes) min remaining" +
                 (authorized ? "" : " · Accessibility permission required — Open Settings…")
         } else {
-            statusLine.title = !authorized ? "Accessibility permission required — Open Settings…" : detected ? "Call active" : "No active call"
+            statusLine.title = scheduled ? "Scheduled meeting" : !authorized ? "Accessibility permission required — Open Settings…" : detected ? "Call active" : "No active call"
         }
         AccessibilityPermission.shared.configure(statusLine, authorized: authorized)
         connectionMenu.refreshPermissionNotice()
@@ -182,19 +198,23 @@ func updateCallState() {
                                                     attributes: [.posixPermissions: 0o700])
             let statusURL = support.appendingPathComponent("status.json")
             let data = try JSONSerialization.data(withJSONObject: [
-                "in_call": value, "observer_authorized": authorized
+                "in_call": value, "observer_authorized": authorized, "computer_active": computerActivity.active,
+                "calendar_authorized": CalendarAgenda.authorized
             ])
             try data.write(to: statusURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: statusURL.path)
         } catch { /* Diagnostics must not interrupt detection or leak paths. */ }
         // Without AX permission, silence is unknown rather than a verified idle
         // report. An explicit manual/test meeting is still valid evidence.
-        if authorized || until != nil || meetingTest.active(now: now),
+        if authorized || until != nil || scheduled || meetingTest.active(now: now),
            let endpoint = ConnectionStore.shared.endpoint() { send(value, to: endpoint) }
         // Boolean-only local logging. No labels, URLs, tokens, or call metadata.
         if value != lastValue {
             print("in_call=\(value) observer_authorized=\(AXIsProcessTrusted())")
             fflush(stdout)
+        }
+        if CalendarAgenda.shared.settings.enabled, let agendaURL = CalendarAgenda.shared.settings.receiver() {
+            CalendarAgenda.shared.send(agenda, to: agendaURL)
         }
         lastSend = now
         lastValue = value
@@ -202,7 +222,7 @@ func updateCallState() {
 }
 manualMenu.onChange = { pollQueue.async { updateCallState() } }
 MainActor.assumeIsolated {
-    connectionMenu.onChange = { pollQueue.async { lastSend = .distantPast; updateCallState() } }
+    connectionMenu.onChange = { pollQueue.async { lastSend = .distantPast; lastComputerSend = .distantPast; updateCallState() } }
     connectionMenu.onTest = {
         meetingTest.start()
         pollQueue.async { lastSend = .distantPast; updateCallState() }

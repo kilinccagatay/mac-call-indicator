@@ -9,6 +9,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEASE_SECONDS, PLATFORMS
 from .policy import command_for, validate_output
+from .agenda import AgendaRuntime
 
 
 async def async_setup(hass, config):
@@ -18,10 +19,14 @@ async def async_setup(hass, config):
 
 
 async def async_setup_entry(hass, entry):
+    if not entry.data.get("agenda_webhook_id"):
+        hass.config_entries.async_update_entry(entry, data={**entry.data, "agenda_webhook_id": webhook.async_generate_id()})
     runtime = MeetingRuntime(hass, entry)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
     webhook.async_register(hass, DOMAIN, entry.title, entry.data["webhook_id"],
                            runtime.receive, local_only=True, allowed_methods=["POST"])
+    webhook.async_register(hass, DOMAIN, entry.title + " agenda", entry.data["agenda_webhook_id"],
+                           runtime.agenda.receive, local_only=True, allowed_methods=["POST"])
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     await runtime.apply_output()
@@ -39,6 +44,7 @@ async def async_unload_entry(hass, entry):
         return False
     runtime = hass.data[DOMAIN].pop(entry.entry_id)
     webhook.async_unregister(hass, entry.data["webhook_id"])
+    webhook.async_unregister(hass, entry.data["agenda_webhook_id"])
     await runtime.close()
     return True
 
@@ -47,6 +53,10 @@ class MeetingRuntime:
     def __init__(self, hass, entry):
         self.hass, self.entry = hass, entry
         self.in_call = None
+        self.computer_active = None
+        self.computer_report = None
+        self.computer_seen = None
+        self.cancel_computer_expiry = None
         self.last_report = None
         self.last_seen = None
         self.listeners = set()
@@ -55,6 +65,7 @@ class MeetingRuntime:
         self.closed = False
         self._config = {**entry.data, **entry.options}
         self.output_ok = True
+        self.agenda = AgendaRuntime(hass, self.notify)
 
     @property
     def config(self):
@@ -72,6 +83,8 @@ class MeetingRuntime:
             body = await request.json()
         except (ValueError, UnicodeError):
             return web.json_response({"error": "invalid_report"}, status=400)
+        if isinstance(body, dict) and set(body) == {"computer_active"} and type(body["computer_active"]) is bool:
+            return await self.receive_computer(body["computer_active"])
         if not isinstance(body, dict) or set(body) != {"in_call"} or type(body["in_call"]) is not bool:
             return web.json_response({"error": "boolean_required"}, status=400)
         async with self.lock:
@@ -88,6 +101,29 @@ class MeetingRuntime:
             if changed or not self.output_ok:
                 await self.apply_output()
         return web.json_response({"accepted": True})
+
+    async def receive_computer(self, active):
+        # Independent lease: computer reports never refresh meeting evidence or
+        # trigger the configured lamp/switch output.
+        async with self.lock:
+            if self.closed:
+                return web.json_response({"error": "receiver_stopped"}, status=503)
+            self.computer_active = active
+            self.computer_report = dt_util.utcnow()
+            self.computer_seen = self.hass.loop.time()
+            if self.cancel_computer_expiry:
+                self.cancel_computer_expiry()
+            self.cancel_computer_expiry = async_call_later(self.hass, LEASE_SECONDS, self.expire_computer)
+            self.notify()
+        return web.json_response({"accepted": True})
+
+    async def expire_computer(self, now):
+        async with self.lock:
+            if self.computer_seen is not None and self.hass.loop.time() - self.computer_seen < LEASE_SECONDS:
+                return
+            self.computer_active = None
+            self.cancel_computer_expiry = None
+            self.notify()
 
     async def expire(self, now):
         async with self.lock:
@@ -121,8 +157,12 @@ class MeetingRuntime:
                 await self.apply_output()
 
     async def close(self):
+        await self.agenda.close()
         async with self.lock:
             self.closed = True
+            if self.cancel_computer_expiry:
+                self.cancel_computer_expiry()
+            self.computer_active = None
             if self.cancel_expiry:
                 self.cancel_expiry()
             self.in_call = None

@@ -1,0 +1,12 @@
+# Add this sensor section to the existing MacBook report trigger block,
+# beside its binary_sensor section. If there has been no report since startup,
+# the first watchdog tick starts the work Mac's unknown-state grace period.
+    sensor:
+      - name: Work Mac Presence Report Epoch
+        unique_id: desk_presence_work_mac_report_epoch
+        state: >-
+          {% set valid = trigger.id == 'report' and trigger.json is defined and
+             trigger.json is mapping and
+             (trigger.json.computer_active is sameas true or trigger.json.computer_active is sameas false) %}
+          {{ as_timestamp(now()) if valid else
+             (as_timestamp(now()) if trigger.id == 'startup' else this.state | float(as_timestamp(now()))) }}

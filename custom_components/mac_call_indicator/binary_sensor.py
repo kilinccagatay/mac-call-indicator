@@ -4,7 +4,8 @@ from .const import DOMAIN, entity_id
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities([MeetingSensor(hass.data[DOMAIN][entry.entry_id])])
+    runtime = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([MeetingSensor(runtime), ComputerSensor(runtime)])
 
 
 class MeetingSensor(BinarySensorEntity):
@@ -38,3 +39,25 @@ class MeetingSensor(BinarySensorEntity):
     async def async_added_to_hass(self):
         self.runtime.listeners.add(self.async_write_ha_state)
         self.async_on_remove(lambda: self.runtime.listeners.discard(self.async_write_ha_state))
+
+
+class ComputerSensor(MeetingSensor):
+    _attr_name = "Computer active"
+    _attr_icon = "mdi:laptop"
+
+    def __init__(self, runtime):
+        super().__init__(runtime)
+        self._attr_unique_id = runtime.entry.entry_id + "_computer"
+        self.entity_id = "binary_sensor.mac_computer_" + runtime.entry.entry_id.lower()
+
+    @property
+    def available(self):
+        return self.runtime.computer_active is not None
+
+    @property
+    def is_on(self):
+        return self.runtime.computer_active
+
+    @property
+    def extra_state_attributes(self):
+        return {"last_report_epoch": self.runtime.computer_report.timestamp() if self.runtime.computer_report else 0}
