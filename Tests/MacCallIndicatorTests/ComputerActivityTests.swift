@@ -1,3 +1,4 @@
+@testable import ComputerPresence
 import XCTest
 @testable import MacCallIndicator
 

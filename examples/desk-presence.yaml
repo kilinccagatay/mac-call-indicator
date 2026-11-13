@@ -1,0 +1,69 @@
+# Append both items to the existing template list.
+# Define desk_presence_webhook in secrets.yaml as an independent random secret.
+  - triggers:
+      - trigger: webhook
+        webhook_id: !secret desk_presence_webhook
+        allowed_methods: [POST]
+        local_only: true
+        id: report
+      - trigger: homeassistant
+        event: start
+        id: startup
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'startup' or (trigger.json is defined and
+             trigger.json is mapping and (trigger.json | list) == ['computer_active'] and
+             (trigger.json.computer_active is sameas true or trigger.json.computer_active is sameas false)) }}
+    binary_sensor:
+      - name: Mac Mini Presence
+        unique_id: desk_presence_personal_mac
+        state: "{{ trigger.id == 'report' and trigger.json.computer_active }}"
+        attributes:
+          last_report_epoch: "{{ as_timestamp(now()) if trigger.id == 'report' else 0 }}"
+
+  - triggers:
+      - trigger: state
+        entity_id:
+          - binary_sensor.mac_computer_active
+          - binary_sensor.mac_mini_presence
+          - sensor.work_mac_presence_report_epoch
+      - trigger: time_pattern
+        seconds: "/5"
+    actions:
+      - variables:
+          sources:
+            - binary_sensor.mac_computer_active
+            - binary_sensor.mac_mini_presence
+          current_epoch: "{{ as_timestamp(now()) }}"
+          evidence: >-
+            {% set result = namespace(active=[], inactive=[]) %}
+            {% for entity in sources %}
+              {% set seen = state_attr(entity, 'last_report_epoch') | float(0) %}
+              {% if entity == sources[0] and not seen %}
+                {% set seen = states('sensor.work_mac_presence_report_epoch') | float(0) %}
+              {% endif %}
+              {% set age = current_epoch | float - seen %}
+              {% if seen > 0 and 0 <= age <= 40 and is_state(entity, 'on') %}
+                {% set result.active = result.active + [seen] %}
+              {% elif seen > 0 and (age >= 120 or (0 <= age <= 40 and is_state(entity, 'off'))) %}
+                {% set result.inactive = result.inactive + [seen] %}
+              {% endif %}
+            {% endfor %}
+            {{ {'active': result.active, 'inactive': result.inactive} }}
+    binary_sensor:
+      - name: Desk Presence Active
+        unique_id: desk_presence_combined
+        state: "{{ evidence.active | length > 0 }}"
+        availability: "{{ evidence.active | length > 0 or evidence.inactive | length == sources | length }}"
+        # Keep the timestamp explicitly zero during uncertainty. The Android
+        # helper interprets zero as UNKNOWN and neither wakes nor sleeps.
+        attributes:
+          last_report_epoch: >-
+            {% if evidence.active %}
+              {{ evidence.active | max }}
+            {% elif evidence.inactive | length == sources | length %}
+              {{ evidence.inactive | max }}
+            {% else %}
+              0
+            {% endif %}

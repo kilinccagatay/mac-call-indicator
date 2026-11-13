@@ -1,3 +1,4 @@
+import ComputerPresence
 import AppKit
 import ApplicationServices
 import Foundation

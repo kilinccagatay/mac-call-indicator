@@ -10,14 +10,14 @@ struct ComputerActivityState: Equatable {
     var active: Bool { !locked && !displayAsleep && !systemAsleep && sessionActive }
 }
 
-final class ComputerActivity {
+public final class ComputerActivity {
     private let lock = NSLock()
     private var state = ComputerActivityState()
     private var observations: [(NotificationCenter, NSObjectProtocol)] = []
-    var onChange: (() -> Void)?
-    var active: Bool { lock.lock(); defer { lock.unlock() }; return state.active }
+    public var onChange: (() -> Void)?
+    public var active: Bool { lock.lock(); defer { lock.unlock() }; return state.active }
 
-    init() {
+    public init() {
         // Snapshot only booleans; never retain session names or identifiers.
         state.displayAsleep = CGDisplayIsAsleep(CGMainDisplayID()) != 0
         if let session = CGSessionCopyCurrentDictionary() as? [String: Any] {
