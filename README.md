@@ -28,8 +28,9 @@ independently of calls.
 
 The [0.4.0 release candidate](https://github.com/kilinccagatay/mac-call-indicator/releases/tag/v0.4.0-rc.1)
 adds an opt-in macOS Calendar agenda without Microsoft Graph or Entra app registration.
-It reads one calendar already synced to the Mac, shares three selectable workdays,
-and shows Monday on weekends. Calendar change notifications plus a one-minute
+It reads one calendar already synced to the Mac, shows today's remaining meetings,
+and shows Monday on weekends. The current source extends the agenda to three
+selectable workdays. Calendar change notifications plus a one-minute
 fallback refresh the local cache; delivery still depends on the upstream Calendar
 account synchronizing its events.
 
@@ -312,7 +313,10 @@ both architectures, strips debug symbols, verifies the ad-hoc signature and macO
 13 deployment targets, excludes user configuration, checks for private build
 paths, and generates SHA-256 checksums. Generated packages stay in ignored dist/.
 
-This remains an experimental project.
+This is an experimental hobby project. Use it at your own risk, and verify
+its behavior with your own Mac, Teams version, Home Assistant instance, and
+chosen output before relying on the signal.
+
 To uninstall, run `sh scripts/uninstall.sh`, revoke Accessibility, and remove the
 Home Assistant integration/automations if no longer needed. Uninstalling does not
 delete your private configuration or credentials automatically.

@@ -33,8 +33,8 @@ The office panel offers equal-width day tabs with an explicit selected state;
 selecting another day shows only that day's events. The first day is restored
 after a real display-dark notification, page hiding, or a new base workday.
 All-day, cancelled, declined and explicitly free events are excluded. Public
-holidays are not inferred. The compact office view shows two upcoming entries,
-or three when its height permits; an accessible summary indicates more entries.
+holidays are not inferred. The Samsung panel scrolls through the selected day’s
+remaining events beneath the day tabs.
 Each day is bounded to 16 title/time-only events. Local calendar change
 notifications and the existing one-minute fallback refresh the whole window.
 Future selected days never trigger the current meeting indicator.
