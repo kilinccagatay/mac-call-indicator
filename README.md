@@ -249,10 +249,10 @@ not change the login preference. macOS may request approval in Login Items.
 The installer preserves an existing startup preference and migrates the old
 project LaunchAgent. CLI options: `--login-status`, `--enable-login`, `--disable-login`.
 
-## Dashboard example: an older Android tablet
+## Dashboard example: Denver
 
-A real-world example uses the meeting source to show **Toplantı** on an older
-HoaryDash panel. It has no green/idle indicator and controls no lamp.
+The Denver panel shows **Toplantı** beneath the weather while a meeting is active.
+This 800 × 480 capture shows the current Build 9 panel during a temporary meeting.
 
 ![Meeting badge on an actual 800 × 480 tablet](docs/images/hoarydash-call-badge.png)
 
