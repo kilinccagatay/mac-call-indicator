@@ -254,7 +254,7 @@ project LaunchAgent. CLI options: `--login-status`, `--enable-login`, `--disable
 The Denver panel shows **Toplantı** beneath the weather while a meeting is active.
 This 800 × 480 capture shows the current Build 9 panel during a temporary meeting.
 
-![Meeting badge on an actual 800 × 480 tablet](docs/images/hoarydash-call-badge.png)
+![Meeting badge on an actual 800 × 480 tablet](docs/images/denver-build-9-meeting.png)
 
 Follow the [HoaryDash guide](docs/hoarydash.md) or the separate
 [older-hardware panel project](https://github.com/kilinccagatay/home-assistant-legacy-panels).
