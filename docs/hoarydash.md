@@ -5,7 +5,7 @@ helper or control a light. Choose **Dashboard / status only**. Your original
 source can remain **binary_sensor.mac_call_active**; the new integration creates
 its own entity ID.
 
-![Meeting badge on an actual panel](images/hoarydash-call-badge.png)
+![Meeting badge on an actual panel](images/denver-build-9-meeting.png)
 
 The current Denver panel shows a red dot next to **Toplantı** below the weather
 while the source is on.
