@@ -7,7 +7,8 @@ its own entity ID.
 
 ![Meeting badge on an actual panel](images/hoarydash-call-badge.png)
 
-The badge is a red dot above **Toplantı**, visible only while the source is on.
+The current Denver panel shows a red dot next to **Toplantı** below the weather
+while the source is on.
 There is no green/idle badge. Off, unknown, unavailable, a lost WebSocket and
 an expired report hide it.
 
